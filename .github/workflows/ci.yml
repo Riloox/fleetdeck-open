@@ -1,0 +1,164 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  # Backend + module tests, the SPA build, and browser tests. Runs on every
+  # push to main, every pull request, and every tag push (so a tag cannot ship
+  # untested).
+  #
+  # Node 22 only: `engines` still declares >=20 (older tooling keeps working),
+  # but Node 20 reached end-of-life in April 2026 and CI gates the oldest
+  # actively supported LTS instead of a retired runtime.
+  test:
+    name: test (node 22)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev
+        # Non-blocking — known advisory (1 high) routes through
+        # node-cron 3.x → uuid (GHSA-w5hq-g745-h8pq); fix is a
+        # breaking node-cron@4 upgrade tracked separately.
+        continue-on-error: true
+
+      - name: Backend and module tests
+        run: npm test
+
+      - name: Build the SPA into public/
+        run: npm run build
+
+      # `npm run test:e2e` is `playwright test --project=chromium`; that project
+      # carries `testIgnore: '**/install.spec.cjs'` (playwright.config.js). The
+      # real-download install specs are their own `install` project, opt-in via
+      # E2E_INSTALL, so they never run in normal CI.
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser tests
+        run: npm run test:e2e
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: playwright-report
+          path: |
+            e2e/report/
+            e2e/results/
+          retention-days: 14
+
+  test-windows:
+    name: test (node 22, windows)
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev
+        # Non-blocking — known advisory (1 high) routes through
+        # node-cron 3.x → uuid (GHSA-w5hq-g745-h8pq); fix is a
+        # breaking node-cron@4 upgrade tracked separately.
+        continue-on-error: true
+
+      - name: Backend and module tests
+        run: npm test
+
+      - name: Build the SPA into public/
+        run: npm run build
+
+      - name: Install Chromium
+        run: npx playwright install chromium
+
+      - name: Browser tests
+        run: npm run test:e2e
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: playwright-report-windows
+          path: |
+            e2e/report/
+            e2e/results/
+          retention-days: 14
+
+  # Manual, tag-triggered release: cut a tag `v<semver>` matching package.json
+  # and this job builds the SPA, packages the artifact, and publishes it to a
+  # GitHub Release with the zip, its checksum, and the full SHA256SUMS manifest.
+  release:
+    name: release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [test, test-windows]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build the SPA into public/
+        run: npm run build
+
+      - name: Assert tag matches package.json version
+        run: |
+          set -eu
+          pkg="$(node -p "require('./package.json').version")"
+          tag="${GITHUB_REF_NAME#v}"
+          if [ "$pkg" != "$tag" ]; then
+            echo "::error::tag v${tag} does not match package.json version ${pkg}; align them before releasing"
+            exit 1
+          fi
+
+      - name: Package the release artifact
+        run: npm run package
+
+      - name: Publish GitHub release
+        run: >-
+          gh release create "$GITHUB_REF_NAME"
+          dist/fleetdeck-*.zip
+          dist/fleetdeck-*.zip.sha256
+          dist/SHA256SUMS
+          --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}

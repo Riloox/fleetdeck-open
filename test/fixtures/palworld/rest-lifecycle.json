@@ -1,0 +1,69 @@
+{
+  "format": "fleetdeck-palworld-rest-fixture",
+  "version": 1,
+  "description": "Sanitized official REST response shapes and recovery states.",
+  "steps": [
+    {
+      "method": "GET",
+      "path": "/v1/api/info",
+      "body": {
+        "version": "v0.fixture",
+        "servername": "Disposable Fleet",
+        "description": "Sanitized fixture"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/api/players",
+      "delayMs": 250,
+      "body": {
+        "players": [
+          {
+            "name": "FixturePlayer",
+            "userid": "fixture-user-1",
+            "accountName": "fixture-account",
+            "location_x": 10,
+            "location_y": 20,
+            "location_z": 30,
+            "level": 12,
+            "ping": 42
+          }
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/api/metrics",
+      "status": 401,
+      "body": {}
+    },
+    {
+      "method": "GET",
+      "path": "/v1/api/metrics",
+      "invalidJson": true
+    },
+    {
+      "method": "GET",
+      "path": "/v1/api/metrics",
+      "timeout": true
+    },
+    {
+      "method": "GET",
+      "path": "/v1/api/metrics",
+      "disconnect": true
+    },
+    {
+      "method": "GET",
+      "path": "/v1/api/metrics",
+      "body": {
+        "days": 4,
+        "uptime": 600,
+        "currentplayernum": 1,
+        "maxplayernum": 32,
+        "serverfps": 60,
+        "serverframetime": 16.6,
+        "basecampnum": 2
+      }
+    }
+  ]
+}

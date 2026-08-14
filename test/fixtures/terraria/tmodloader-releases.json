@@ -1,0 +1,97 @@
+[
+  {
+    "tag_name": "v2022.09.48.1",
+    "name": "1.4.3-Legacy Version Update: v2022.09.48.1",
+    "draft": false,
+    "prerelease": true,
+    "published_at": "2026-07-13T20:28:42Z",
+    "assets": [
+      {
+        "name": "ExampleMod.zip",
+        "size": 35860993,
+        "browser_download_url": "https://github.com/tModLoader/tModLoader/releases/download/v2022.09.48.1/ExampleMod.zip"
+      },
+      {
+        "name": "tModLoader.zip",
+        "size": 44132240,
+        "browser_download_url": "https://github.com/tModLoader/tModLoader/releases/download/v2022.09.48.1/tModLoader.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "v2026.06.2.1",
+    "name": "1.4.4-refs/heads/preview Version Update: v2026.06.2.1",
+    "draft": false,
+    "prerelease": true,
+    "published_at": "2026-07-06T23:23:34Z",
+    "assets": [
+      {
+        "name": "ExampleMod.zip",
+        "size": 36558001,
+        "browser_download_url": "https://github.com/tModLoader/tModLoader/releases/download/v2026.06.2.1/ExampleMod.zip"
+      },
+      {
+        "name": "tModLoader.zip",
+        "size": 60795066,
+        "browser_download_url": "https://github.com/tModLoader/tModLoader/releases/download/v2026.06.2.1/tModLoader.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "v2026.06.2.0",
+    "name": "1.4.4-refs/heads/preview Version Update: v2026.06.2.0",
+    "draft": false,
+    "prerelease": true,
+    "published_at": "2026-07-02T18:50:13Z",
+    "assets": [
+      {
+        "name": "ExampleMod.zip",
+        "size": 36551959,
+        "browser_download_url": "https://github.com/tModLoader/tModLoader/releases/download/v2026.06.2.0/ExampleMod.zip"
+      },
+      {
+        "name": "tModLoader.zip",
+        "size": 60795067,
+        "browser_download_url": "https://github.com/tModLoader/tModLoader/releases/download/v2026.06.2.0/tModLoader.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "v2026.05.3.0",
+    "name": "1.4.4-refs/heads/stable Version Update: v2026.05.3.0",
+    "draft": false,
+    "prerelease": false,
+    "published_at": "2026-07-02T18:46:45Z",
+    "assets": [
+      {
+        "name": "ExampleMod.zip",
+        "size": 36533090,
+        "browser_download_url": "https://github.com/tModLoader/tModLoader/releases/download/v2026.05.3.0/ExampleMod.zip"
+      },
+      {
+        "name": "tModLoader.zip",
+        "size": 60778105,
+        "browser_download_url": "https://github.com/tModLoader/tModLoader/releases/download/v2026.05.3.0/tModLoader.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "v2026.05.2.0",
+    "name": "1.4.4-refs/heads/preview Version Update: v2026.05.2.0",
+    "draft": false,
+    "prerelease": true,
+    "published_at": "2026-06-01T00:27:09Z",
+    "assets": [
+      {
+        "name": "ExampleMod.zip",
+        "size": 36534512,
+        "browser_download_url": "https://github.com/tModLoader/tModLoader/releases/download/v2026.05.2.0/ExampleMod.zip"
+      },
+      {
+        "name": "tModLoader.zip",
+        "size": 60778132,
+        "browser_download_url": "https://github.com/tModLoader/tModLoader/releases/download/v2026.05.2.0/tModLoader.zip"
+      }
+    ]
+  }
+]

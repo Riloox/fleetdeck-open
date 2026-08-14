@@ -1,0 +1,734 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
+import {
+  AlertTriangle, ArchiveRestore, ArrowUpRight, Clock3, Download,
+  FileJson, FileUp, FileWarning, FolderSearch, PackageOpen, Power,
+  PowerOff, RefreshCw, Save, Search, ShieldAlert, Trash2,
+} from 'lucide-react';
+import { Alert } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { EmptyState } from '@/components/shared/EmptyState';
+import { ErrorState } from '@/components/shared/ErrorState';
+import { PromptDialog } from '@/components/shared/PromptDialog';
+import { Loading } from '@/components/shared/Loading';
+import { ViewHeader } from '@/components/layout/Page';
+import { useApi } from '@/hooks/useApi';
+import { useT } from '@/context/I18nContext';
+import { useServer } from '@/context/ServerContext';
+import { useAuth } from '@/context/AuthContext';
+import { fmtBytes } from '@/lib/utils';
+
+const API = '/api/terraria/mods';
+const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`);
+
+// Matches the raw <select> styling the Modrinth browser uses for its filters.
+const SELECT_CLASS = 'h-9 rounded-md border border-input bg-background/60 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring/50';
+
+function issueVariant(severity) {
+  return severity === 'error' ? 'destructive' : 'softWarn';
+}
+
+export function TerrariaModsView() {
+  const api = useApi();
+  const t = useT();
+  const { activeServerId, getServerStatus } = useServer();
+  const { hasCapability } = useAuth();
+  const canManage = hasCapability('plugins.manage', activeServerId);
+  const status = activeServerId ? getServerStatus(activeServerId) : null;
+  const offline = status?.status === 'offline';
+  const [tab, setTab] = useState('workshop');
+  const [data, setData] = useState(null);
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState('');
+  const [preview, setPreview] = useState(null);
+  const [restartRequired, setRestartRequired] = useState(false);
+  const [workshopValue, setWorkshopValue] = useState('');
+  const [workshopItem, setWorkshopItem] = useState(null);
+  const [updates, setUpdates] = useState([]);
+  const [packs, setPacks] = useState([]);
+  const [captureOpen, setCaptureOpen] = useState(false);
+  const [catalog, setCatalog] = useState(null);
+  const [catalogQuery, setCatalogQuery] = useState('');
+  const [catalogSort, setCatalogSort] = useState('trend');
+  const [catalogTag, setCatalogTag] = useState('');
+
+  const load = useCallback(async () => {
+    if (!activeServerId) return;
+    setError('');
+    try {
+      const [inventory, packData] = await Promise.all([
+        api(`${API}?serverId=${encodeURIComponent(activeServerId)}`),
+        api(`${API}/modpacks?serverId=${encodeURIComponent(activeServerId)}`),
+      ]);
+      setData(inventory);
+      setPacks(packData.packs || []);
+    }
+    catch (loadError) {
+      setError(loadError.message);
+      toast.error(loadError.message);
+    }
+  }, [activeServerId, api]);
+
+  const browse = useCallback(async (force = false, overrides = {}) => {
+    if (!activeServerId) return;
+    setBusy('catalog');
+    try {
+      const params = new URLSearchParams({
+        serverId: activeServerId,
+        q: overrides.q ?? catalogQuery,
+        sort: overrides.sort ?? catalogSort,
+        tag: overrides.tag ?? catalogTag,
+        page: '1',
+      });
+      if (force) params.set('force', '1');
+      setCatalog(await api(`${API}/workshop/catalog?${params}`));
+    } catch (browseError) { toast.error(browseError.message); }
+    setBusy('');
+  }, [activeServerId, api, catalogQuery, catalogSort, catalogTag]);
+
+  useEffect(() => {
+    setData(null);
+    setCatalog(null);
+    setRestartRequired(false);
+    load();
+    browse();
+  }, [activeServerId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Re-run the catalog search when the sort changes, like the Modrinth browser
+  // does - but not on the first render, where the mount effect already fetched.
+  const skipSortBrowse = useRef(true);
+  useEffect(() => {
+    if (skipSortBrowse.current) { skipSortBrowse.current = false; return; }
+    browse();
+  }, [catalogSort]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Clicking a tag chip filters the catalog by that tag immediately.
+  function filterByTag(tag) {
+    setCatalogTag(tag);
+    browse(false, { tag });
+  }
+
+  const issuesByMod = useMemo(() => {
+    const result = new Map();
+    for (const issue of data?.diagnostics?.issues || []) {
+      const rows = result.get(issue.mod) || [];
+      rows.push(issue);
+      result.set(issue.mod, rows);
+    }
+    return result;
+  }, [data]);
+
+  async function stopServer() {
+    setBusy('stop');
+    try {
+      await api('/api/server/stop', { method: 'POST' });
+      toast.success(t('terraria.mods.stopRequested'));
+    } catch (stopError) { toast.error(stopError.message); }
+    setBusy('');
+  }
+
+  async function review(mod, action) {
+    setBusy(`${action}:${mod.internalName}`);
+    try {
+      const result = await api(`${API}/${encodeURIComponent(mod.internalName)}/${action}`, {
+        method: 'POST',
+        body: { serverId: activeServerId },
+      });
+      setPreview({ ...result.preview, action });
+    } catch (reviewError) { toast.error(reviewError.message); }
+    setBusy('');
+  }
+
+  async function reviewRemove(mod) {
+    setBusy(`remove:${mod.internalName}`);
+    try {
+      const result = await api(`${API}/${encodeURIComponent(mod.internalName)}`, {
+        method: 'DELETE',
+        body: { serverId: activeServerId },
+      });
+      setPreview({ ...result.preview, action: 'remove' });
+    } catch (reviewError) { toast.error(reviewError.message); }
+    setBusy('');
+  }
+
+  async function apply() {
+    if (!preview) return;
+    setBusy('apply');
+    try {
+      if (preview.action === 'import') {
+        const result = await api(`${API}/import`, {
+          method: 'POST', headers: { 'Idempotency-Key': uuid() },
+          body: { serverId: activeServerId, token: preview.token, replace: preview.plan.some((item) => item.action === 'replace') },
+        });
+        setRestartRequired(Boolean(result.restartRequired));
+        setPreview(null);
+        toast.success(t('terraria.mods.importDone'));
+        await load();
+        setBusy('');
+        return;
+      }
+      if (preview.action === 'pack-apply') {
+        const result = await api(`${API}/modpacks/${encodeURIComponent(preview.pack.id)}/apply`, {
+          method: 'POST', headers: { 'Idempotency-Key': uuid() },
+          body: { serverId: activeServerId, token: preview.token },
+        });
+        setRestartRequired(Boolean(result.restartRequired));
+        setPreview(null);
+        toast.success(t('terraria.mods.packApplied'));
+        await load();
+        setBusy('');
+        return;
+      }
+      const url = preview.action === 'remove'
+        ? `${API}/${encodeURIComponent(preview.internalName)}`
+        : `${API}/${encodeURIComponent(preview.internalName)}/${preview.action}`;
+      const result = await api(url, {
+        method: preview.action === 'remove' ? 'DELETE' : 'POST',
+        headers: { 'Idempotency-Key': uuid() },
+        body: { serverId: activeServerId, token: preview.token },
+      });
+      setRestartRequired(Boolean(result.restartRequired));
+      setPreview(null);
+      toast.success(t(`terraria.mods.${preview.action}Done`));
+      await load();
+    } catch (applyError) { toast.error(applyError.message); }
+    setBusy('');
+  }
+
+  async function importFile(file) {
+    if (!file) return;
+    setBusy('import');
+    try {
+      const body = new FormData();
+      body.append('file', file);
+      const result = await api(`${API}/import/preview?serverId=${encodeURIComponent(activeServerId)}`, { method: 'POST', body });
+      setPreview({ ...result.preview, action: 'import' });
+    } catch (importError) { toast.error(importError.message); }
+    setBusy('');
+  }
+
+  async function resolveWorkshop() {
+    setBusy('workshop-resolve');
+    try {
+      const result = await api(`${API}/workshop/resolve`, { method: 'POST', body: { serverId: activeServerId, value: workshopValue } });
+      setWorkshopItem(result.item);
+    } catch (resolveError) { toast.error(resolveError.message); }
+    setBusy('');
+  }
+
+  async function installWorkshop(value = workshopItem?.id) {
+    setBusy('workshop-install');
+    try {
+      const result = await api(`${API}/workshop/install`, { method: 'POST', body: { serverId: activeServerId, value } });
+      setPreview({ ...result.preview, action: 'import' });
+    } catch (installError) { toast.error(installError.message); }
+    setBusy('');
+  }
+
+  async function checkUpdates() {
+    setBusy('updates');
+    try {
+      const result = await api(`${API}/updates?serverId=${encodeURIComponent(activeServerId)}&force=true`);
+      setUpdates(result.updates || []);
+    } catch (updateError) { toast.error(updateError.message); }
+    setBusy('');
+  }
+
+  async function capturePack(name) {
+    setBusy('pack-capture');
+    try {
+      await api(`${API}/modpacks`, { method: 'POST', body: { serverId: activeServerId, name } });
+      toast.success(t('terraria.mods.packCaptured'));
+      await load();
+    } catch (packError) { toast.error(packError.message); }
+    setBusy('');
+  }
+
+  async function importPack(file) {
+    if (!file) return;
+    setBusy('pack-import');
+    try {
+      const document = JSON.parse(await file.text());
+      await api(`${API}/modpacks`, { method: 'POST', body: { serverId: activeServerId, document } });
+      toast.success(t('terraria.mods.packImported'));
+      await load();
+    } catch (packError) { toast.error(packError.message); }
+    setBusy('');
+  }
+
+  async function reviewPack(pack) {
+    setBusy(`pack:${pack.id}`);
+    try {
+      const result = await api(`${API}/modpacks/${encodeURIComponent(pack.id)}/apply/preview`, {
+        method: 'POST', body: { serverId: activeServerId },
+      });
+      setPreview({ ...result.preview, action: 'pack-apply' });
+    } catch (packError) { toast.error(packError.message); }
+    setBusy('');
+  }
+
+  async function exportPack(pack) {
+    try {
+      const exported = await api(`${API}/modpacks/${encodeURIComponent(pack.id)}/export?serverId=${encodeURIComponent(activeServerId)}`);
+      const url = URL.createObjectURL(new Blob([JSON.stringify(exported, null, 2)], { type: 'application/json' }));
+      const anchor = window.document.createElement('a');
+      anchor.href = url;
+      anchor.download = `${pack.name.replace(/[^a-z0-9_-]+/gi, '-')}.json`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (exportError) { toast.error(exportError.message); }
+  }
+
+  async function deletePack(pack) {
+    setBusy(`pack-delete:${pack.id}`);
+    try {
+      await api(`${API}/modpacks/${encodeURIComponent(pack.id)}`, { method: 'DELETE', body: { serverId: activeServerId } });
+      await load();
+    } catch (packError) { toast.error(packError.message); }
+    setBusy('');
+  }
+
+  async function restore(entry) {
+    setBusy(`restore:${entry.id}`);
+    try {
+      const result = await api(`${API}/trash/${encodeURIComponent(entry.id)}/restore`, {
+        method: 'POST',
+        body: { serverId: activeServerId },
+      });
+      setRestartRequired(Boolean(result.restartRequired));
+      toast.success(t('terraria.mods.restoreDone'));
+      await load();
+    } catch (restoreError) { toast.error(restoreError.message); }
+    setBusy('');
+  }
+
+  if (!data && !error) return <Loading />;
+  if (error && !data) return <ErrorState error={error} onRetry={load} />;
+
+  const issues = data?.diagnostics?.issues || [];
+  const errors = issues.filter((issue) => issue.severity === 'error').length;
+
+  return (
+    <div className="space-y-6">
+      <ViewHeader
+        title={t('terraria.mods.title')}
+        actions={<Button variant="glass" size="sm" onClick={() => { load(); browse(true); }}><RefreshCw className="h-3.5 w-3.5" />{t('common.refresh')}</Button>}
+      />
+
+      {!offline && (
+        <Alert variant="warn">
+          <AlertTriangle className="h-4 w-4" />
+          <div className="flex flex-1 flex-wrap items-center justify-between gap-3">
+            <div><strong>{t('terraria.mods.offlineTitle')}</strong><p>{t('terraria.mods.offlineHelp')}</p></div>
+            <Button variant="glass" size="sm" onClick={stopServer} disabled={!canManage || busy === 'stop'}>
+              <PowerOff className="h-4 w-4" />{t('terraria.mods.stopServer')}
+            </Button>
+          </div>
+        </Alert>
+      )}
+
+      {!canManage && (
+        <Alert variant="info"><ShieldAlert className="h-4 w-4" />{t('terraria.mods.readOnly')}</Alert>
+      )}
+
+      {error && data && (
+        <Alert variant="error"><AlertTriangle className="h-4 w-4" />{error}</Alert>
+      )}
+
+      {restartRequired && (
+        <Alert variant="info"><RefreshCw className="h-4 w-4" /><div><strong>{t('terraria.mods.restartTitle')}</strong><p>{t('terraria.mods.restartHelp')}</p></div></Alert>
+      )}
+
+      <Card>
+        <CardContent>
+          <Tabs value={tab} onValueChange={setTab}>
+            <div className="flex flex-wrap items-end gap-4">
+              <div className="space-y-1.5">
+                <div className="px-1 text-label font-medium uppercase tracking-wider text-muted-foreground">
+                  {t('terraria.mods.browseGroup')}
+                </div>
+                <TabsList>
+                  <TabsTrigger value="workshop">{t('terraria.mods.tabWorkshop')}</TabsTrigger>
+                  <TabsTrigger value="add">{t('terraria.mods.addTitle')}</TabsTrigger>
+                </TabsList>
+              </div>
+              <div className="space-y-1.5 sm:border-l sm:border-border sm:pl-4">
+                <div className="px-1 text-label font-medium uppercase tracking-wider text-muted-foreground">
+                  {t('terraria.mods.manageGroup')}
+                </div>
+                <TabsList>
+                  <TabsTrigger value="installed">{t('terraria.mods.installed')}</TabsTrigger>
+                  <TabsTrigger value="updates">{t('terraria.mods.updatesTitle')}</TabsTrigger>
+                  <TabsTrigger value="modpacks">{t('terraria.mods.modpacksTitle')}</TabsTrigger>
+                  <TabsTrigger value="quarantine">{t('terraria.mods.tabQuarantine')}</TabsTrigger>
+                </TabsList>
+              </div>
+            </div>
+
+            <TabsContent value="workshop">
+              <form onSubmit={(event) => { event.preventDefault(); browse(true); }} className="flex flex-wrap gap-2 mb-5">
+                <div className="flex items-center gap-2 flex-1 min-w-48">
+                  <Input
+                    value={catalogQuery}
+                    onChange={(event) => setCatalogQuery(event.target.value)}
+                    placeholder={t('terraria.mods.catalog.searchPlaceholder')}
+                    aria-label={t('terraria.mods.catalog.searchPlaceholder')}
+                    className="flex-1"
+                  />
+                </div>
+                <Input
+                  value={catalogTag}
+                  onChange={(event) => setCatalogTag(event.target.value)}
+                  placeholder={t('terraria.mods.catalog.tagPlaceholder')}
+                  aria-label={t('terraria.mods.catalog.tagPlaceholder')}
+                  className="w-36"
+                />
+                <select
+                  className={SELECT_CLASS}
+                  value={catalogSort}
+                  onChange={(event) => setCatalogSort(event.target.value)}
+                  aria-label={t('terraria.mods.catalog.sort')}
+                >
+                  <option value="trend">{t('terraria.mods.catalog.sortTrending')}</option>
+                  <option value="recent">{t('terraria.mods.catalog.sortRecent')}</option>
+                  <option value="updated">{t('terraria.mods.catalog.sortUpdated')}</option>
+                  <option value="subscribed">{t('terraria.mods.catalog.sortSubscribed')}</option>
+                </select>
+                <Button type="submit" variant="default" disabled={busy === 'catalog'}>
+                  <Search className="h-3.5 w-3.5" />
+                  {t('terraria.mods.catalog.search')}
+                </Button>
+              </form>
+
+              {catalog?.stale && (
+                <Alert variant="warn" className="mb-4"><Clock3 className="h-4 w-4" />{t('terraria.mods.catalog.fallback')}</Alert>
+              )}
+
+              {!catalog ? (
+                <Loading />
+              ) : catalog.items?.length > 0 ? (
+                <div className="space-y-2">
+                  {catalog.items.map((item) => (
+                    <div key={item.id} className="flex items-center gap-3 rounded-lg border border-border/60 bg-secondary/20 p-3 hover:bg-secondary/40 transition-colors">
+                      {item.previewUrl ? (
+                        <img src={item.previewUrl} alt="" loading="lazy" className="h-12 w-12 rounded shrink-0 object-cover"
+                          onError={(event) => { event.target.style.visibility = 'hidden'; }} />
+                      ) : (
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded bg-muted text-muted-foreground">
+                          <PackageOpen className="h-5 w-5" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-sm text-foreground truncate">{item.title || t('terraria.mods.catalog.untitled', { id: item.id })}</div>
+                        <div className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{item.description || t('terraria.mods.catalog.noDescription')}</div>
+                        {(item.tags || []).length > 0 && (
+                          <div className="mt-1.5 flex flex-wrap gap-1">
+                            {(item.tags || []).slice(0, 4).map((itemTag) => (
+                              <button key={itemTag} type="button" onClick={() => filterByTag(itemTag)}>
+                                <Badge variant="default">{itemTag}</Badge>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex shrink-0 gap-2">
+                        <Button variant="default" size="sm" disabled={!canManage || !offline || Boolean(busy)} onClick={() => installWorkshop(item.id)}>
+                          <Download className="h-3.5 w-3.5" />
+                          {t('terraria.mods.catalog.review')}
+                        </Button>
+                        <Button asChild variant="glass" size="sm">
+                          <a href={item.url} target="_blank" rel="noreferrer">
+                            <ArrowUpRight className="h-3.5 w-3.5" />
+                            {t('terraria.mods.catalog.details')}
+                          </a>
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState
+                  icon={FolderSearch}
+                  title={t('terraria.mods.catalog.noResults')}
+                  message={t('terraria.mods.catalog.noResultsHelp')}
+                  action={(
+                    <Button asChild variant="glass">
+                      <a href={catalog.fallbackUrl} target="_blank" rel="noreferrer">
+                        <ArrowUpRight className="h-3.5 w-3.5" />
+                        {t('terraria.mods.catalog.openWorkshop')}
+                      </a>
+                    </Button>
+                  )}
+                />
+              )}
+            </TabsContent>
+
+            <TabsContent value="add">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-lg border border-border/60 bg-secondary/10 p-4">
+                  <p className="mb-3 text-xs text-muted-foreground">{t('terraria.mods.localHelp')}</p>
+                  <Button asChild variant="glass" className="w-full" disabled={!canManage || !offline || Boolean(busy)}>
+                    <label>
+                      <FileUp className="h-4 w-4" />
+                      {t('terraria.mods.localImport')}
+                      <input className="sr-only" type="file" accept=".tmod,.zip" onChange={(event) => importFile(event.target.files?.[0])} />
+                    </label>
+                  </Button>
+                </div>
+                <div className="rounded-lg border border-border/60 bg-secondary/10 p-4">
+                  <p className="mb-3 text-xs text-muted-foreground">{t('terraria.mods.workshopHelp')}</p>
+                  <div className="flex gap-2">
+                    <Input
+                      value={workshopValue}
+                      onChange={(event) => { setWorkshopValue(event.target.value); setWorkshopItem(null); }}
+                      placeholder={t('terraria.mods.workshopPlaceholder')}
+                    />
+                    <Button variant="glass" onClick={resolveWorkshop} disabled={!workshopValue.trim() || busy === 'workshop-resolve'}>
+                      {t('terraria.mods.resolveWorkshop')}
+                    </Button>
+                  </div>
+                  {workshopItem && (
+                    <div className="mt-3 rounded-md border border-border/60 bg-secondary/20 p-3">
+                      <strong className="text-sm">{workshopItem.title}</strong>
+                      <p className="mt-1 text-xs text-muted-foreground">#{workshopItem.id} · {workshopItem.fileSize ? fmtBytes(workshopItem.fileSize) : '—'}</p>
+                      <Button variant="default" size="sm" className="mt-3 w-full" onClick={() => installWorkshop()} disabled={!canManage || !offline || Boolean(busy)}>
+                        <Download className="h-3.5 w-3.5" />
+                        {t('terraria.mods.workshopInstall')}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="installed">
+              {!data.mods.length && !data.unreadable.length ? (
+                <p className="text-sm text-muted-foreground italic">{t('terraria.mods.empty')} · {t('terraria.mods.emptyHelp')}</p>
+              ) : (
+                <div className="space-y-2">
+                  {data.mods.map((mod) => {
+                    const modIssues = issuesByMod.get(mod.internalName) || [];
+                    return (
+                      <div key={mod.file} className="rounded-lg border border-border/60 bg-secondary/20 p-3 hover:bg-secondary/40 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded bg-muted text-muted-foreground">
+                            <PackageOpen className="h-5 w-5" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-semibold text-sm text-foreground truncate">{mod.displayName}</span>
+                              <Badge variant={mod.enabled ? 'online' : 'offline'}>{mod.enabled ? t('terraria.mods.enabled') : t('terraria.mods.disabled')}</Badge>
+                              <Badge variant="default">{t(`terraria.mods.source.${mod.source}`)}</Badge>
+                              {modIssues.length > 0 && <Badge variant="destructive">{t('terraria.mods.issueCount', { count: modIssues.length })}</Badge>}
+                            </div>
+                            <div className="text-xs text-muted-foreground/60 mt-1 truncate">
+                              {mod.internalName} · v{mod.version} · tML {mod.tmlVersion} · {fmtBytes(mod.sizeBytes)}{mod.author ? ` · ${t('terraria.mods.by', { author: mod.author })}` : ''}
+                            </div>
+                          </div>
+                          <div className="flex shrink-0 flex-wrap gap-2">
+                            <Button
+                              variant="glass"
+                              size="sm"
+                              disabled={!canManage || !offline || Boolean(busy)}
+                              onClick={() => review(mod, mod.enabled ? 'disable' : 'enable')}
+                            >
+                              {mod.enabled ? <PowerOff className="h-3.5 w-3.5" /> : <Power className="h-3.5 w-3.5" />}
+                              {t(`terraria.mods.${mod.enabled ? 'disable' : 'enable'}`)}
+                            </Button>
+                            <Button variant="destructive" size="sm" disabled={!canManage || !offline || Boolean(busy)} onClick={() => reviewRemove(mod)}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                              {t('common.remove')}
+                            </Button>
+                          </div>
+                        </div>
+                        {modIssues.length > 0 && (
+                          <div className="mt-3 space-y-2 border-t border-border/60 pt-2">
+                            {modIssues.map((issue, index) => (
+                              <div key={`${issue.code}:${index}`} className="text-xs">
+                                <p className="font-medium text-status-error">{issue.detail}</p>
+                                <p className="text-muted-foreground">{issue.suggestion}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {data.unreadable.map((item) => (
+                    <div key={item.file} className="flex items-center gap-3 rounded-lg border border-border/60 bg-secondary/20 p-3">
+                      <FileWarning className="h-5 w-5 shrink-0 text-status-error" />
+                      <div className="min-w-0">
+                        <div className="break-all font-semibold text-sm text-foreground">{item.file}</div>
+                        <div className="mt-0.5 break-words text-xs text-muted-foreground">{item.reason}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <p className="text-label text-muted-foreground/70 pt-2 break-all">{data.modsDir}</p>
+            </TabsContent>
+
+            <TabsContent value="updates">
+              <p className="mb-3 text-xs text-muted-foreground">{t('terraria.mods.updatesHelp')}</p>
+              <Button variant="default" size="sm" onClick={checkUpdates} disabled={busy === 'updates'}>
+                <RefreshCw className="h-3.5 w-3.5" />
+                {t('terraria.mods.checkUpdates')}
+              </Button>
+              {updates.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  {updates.map((update) => (
+                    <div key={update.internalName} className="flex items-center gap-3 rounded-lg border border-border/60 bg-secondary/20 p-3 hover:bg-secondary/40 transition-colors">
+                      <div className="flex-1 min-w-0">
+                        <span className="font-semibold text-sm text-foreground truncate">{update.displayName}</span>
+                      </div>
+                      <Badge variant={update.state === 'update-ready' ? 'softWarn' : 'default'}>{t(`terraria.mods.updateState.${update.state}`)}</Badge>
+                      {update.state === 'update-ready' && (
+                        <Button size="sm" variant="default" onClick={() => installWorkshop(update.workshopId)} disabled={!canManage || !offline || Boolean(busy)}>
+                          <Download className="h-3.5 w-3.5" />
+                          {t('terraria.mods.reviewUpdate')}
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="modpacks">
+              <p className="mb-3 text-xs text-muted-foreground">{t('terraria.mods.modpacksHelp')}</p>
+              <div className="mb-4 flex flex-wrap gap-2">
+                <Button variant="default" size="sm" onClick={() => setCaptureOpen(true)} disabled={!canManage || Boolean(busy)}>
+                  <Save className="h-3.5 w-3.5" />
+                  {t('terraria.mods.capturePack')}
+                </Button>
+                <Button asChild variant="glass" size="sm" disabled={!canManage || Boolean(busy)}>
+                  <label>
+                    <FileUp className="h-3.5 w-3.5" />
+                    {t('terraria.mods.importPack')}
+                    <input className="sr-only" type="file" accept=".json" onChange={(event) => importPack(event.target.files?.[0])} />
+                  </label>
+                </Button>
+              </div>
+              {!packs.length ? (
+                <p className="text-sm text-muted-foreground italic">{t('terraria.mods.noPacks')}</p>
+              ) : (
+                <div className="space-y-2">
+                  {packs.map((pack) => (
+                    <div key={pack.id} className="flex items-center gap-3 rounded-lg border border-border/60 bg-secondary/20 p-3 hover:bg-secondary/40 transition-colors">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded bg-muted text-muted-foreground">
+                        <FileJson className="h-5 w-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-semibold text-sm text-foreground truncate">{pack.name}</span>
+                          {pack.active && <Badge variant="online">{t('terraria.mods.activePack')}</Badge>}
+                        </div>
+                        <div className="text-xs text-muted-foreground/60 mt-1">{t('terraria.mods.packCount', { count: pack.modCount })}</div>
+                      </div>
+                      <div className="flex shrink-0 gap-2">
+                        <Button size="sm" variant="default" onClick={() => reviewPack(pack)} disabled={!canManage || !offline || Boolean(busy)}>
+                          {t('terraria.mods.applyPack')}
+                        </Button>
+                        <Button size="sm" variant="glass" onClick={() => exportPack(pack)} aria-label={t('terraria.mods.exportPack')}>
+                          <Download className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button size="sm" variant="destructive" onClick={() => deletePack(pack)} disabled={!canManage || Boolean(busy)} aria-label={t('common.remove')}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="quarantine">
+              {!data.trash.length ? (
+                <p className="text-sm text-muted-foreground italic">{t('terraria.mods.quarantineEmpty')}</p>
+              ) : (
+                <div className="space-y-2">
+                  {data.trash.map((entry) => (
+                    <div key={entry.id} className="flex items-center gap-3 rounded-lg border border-border/60 bg-secondary/20 p-3 hover:bg-secondary/40 transition-colors">
+                      <div className="flex-1 min-w-0">
+                        <div className="break-all font-semibold text-sm text-foreground">{entry.label}</div>
+                        <div className="text-xs text-muted-foreground/60 mt-1">{fmtBytes(entry.sizeBytes)} · {new Date(entry.trashedAt).toLocaleString()}</div>
+                      </div>
+                      <Button variant="glass" size="sm" disabled={!canManage || !offline || !entry.restorable || Boolean(busy)} onClick={() => restore(entry)}>
+                        <ArchiveRestore className="h-3.5 w-3.5" />
+                        {t('terraria.mods.restore')}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+
+      {issues.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><ShieldAlert className="h-4 w-4" />{t('terraria.mods.diagnostics')}</CardTitle>
+            <Badge variant={errors ? 'destructive' : 'softWarn'}>{t('terraria.mods.issueCount', { count: issues.length })}</Badge>
+          </CardHeader>
+          <CardContent className="divide-y divide-border p-0">
+            {issues.map((issue, index) => (
+              <div key={`${issue.code}:${issue.mod}:${index}`} className="grid gap-1 px-5 py-3 sm:grid-cols-[auto_1fr]">
+                <Badge className="w-fit" variant={issueVariant(issue.severity)}>{t(`terraria.mods.severity.${issue.severity}`)}</Badge>
+                <div>
+                  <p className="text-sm font-medium">{issue.detail}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{issue.suggestion}</p>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      <Dialog open={Boolean(preview)} onOpenChange={(open) => { if (!open && !busy) setPreview(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>{t(`terraria.mods.preview.${preview?.action || 'enable'}`)}</DialogTitle></DialogHeader>
+          <DialogBody className="space-y-3">
+            <p>{preview?.action === 'import' ? t('terraria.mods.importPreviewHelp') : preview?.action === 'pack-apply' ? t('terraria.mods.packPreviewHelp', { name: preview?.pack?.name || '' }) : t('terraria.mods.previewHelp', { name: preview?.displayName || '' })}</p>
+            {preview?.plan && (
+              <div className="max-h-56 space-y-2 overflow-auto border border-border p-3 text-xs">
+                {(Array.isArray(preview.plan) ? preview.plan : [...preview.plan.add, ...preview.plan.remove, ...preview.plan.enable, ...preview.plan.disable]).map((item, index) => (
+                  <div key={`${item.internalName}:${index}`} className="flex justify-between gap-3">
+                    <span>{item.displayName || item.internalName}</span>
+                    <Badge variant="default">{item.action || (preview.plan.add?.includes(item) ? 'missing' : preview.plan.remove?.includes(item) ? 'remove' : preview.plan.enable?.includes(item) ? 'enable' : 'disable')}</Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="border border-border p-3 text-xs">
+              <span className="block text-muted-foreground">{t('terraria.mods.internalName')}</span>
+              <code>{preview?.internalName}</code>
+            </div>
+            <p className="flex items-start gap-2 text-xs text-muted-foreground"><RefreshCw className="mt-0.5 h-3.5 w-3.5 shrink-0" />{t('terraria.mods.previewRestart')}</p>
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="glass" onClick={() => setPreview(null)} disabled={busy === 'apply'}>{t('common.cancel')}</Button>
+            <Button variant={preview?.action === 'remove' ? 'destructive' : 'default'} onClick={apply} disabled={!canManage || busy === 'apply' || preview?.blocked}>
+              {t('common.confirm')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <PromptDialog
+        open={captureOpen}
+        onOpenChange={setCaptureOpen}
+        title={t('terraria.mods.capturePack')}
+        label={t('terraria.mods.packName')}
+        placeholder={t('terraria.mods.packName')}
+        confirmLabel={t('terraria.mods.capturePack')}
+        onSubmit={capturePack}
+      />
+    </div>
+  );
+}

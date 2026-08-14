@@ -1,0 +1,87 @@
+# dependencies
+node_modules/
+
+# local config - contains secrets (jwtSecret, password hashes) and machine paths
+config.json
+initial-admin-password.txt
+
+# environment files and local secrets (keep documented templates)
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.crt
+*.cer
+
+# runtime data
+metrics.json
+*.pid
+*.pid.lock
+*.seed
+
+# SQLite database and database snapshots (created by the platform foundation;
+# contains audit, operations, capability grants, etc.)
+data/
+
+# tracked child PIDs, so a restarted panel can re-attach to still-running servers
+running.json
+
+# managed Java runtimes (downloaded Temurin JREs per Java major)
+runtimes/
+
+# installer cache - SteamCMD and downloaded dedicated-server installers. This is a
+# runtime cache, not a shipped asset: ensureSteamCmd() re-downloads SteamCMD when the
+# folder is missing, and it churns ~30 MB of platform-specific binaries on every run.
+resources/installers/
+
+# logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+# captured console output under test/fixtures is evidence, not runtime logs:
+# every Terraria console pattern is pinned to one of these files.
+!test/fixtures/**/*.log
+
+# test, coverage, cache, and temporary output
+coverage/
+.nyc_output/
+.cache/
+.parcel-cache/
+.eslintcache
+*.tmp
+*.temp
+*.swp
+*.swo
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# browser-test output (traces, failure screenshots, HTML report)
+e2e/results/
+e2e/report/
+
+# built SPA. Vite content-hashes every chunk, so a rebuild renames index-*.js,
+# index-*.css and the icon/vendor chunks - each build landed as a delete+add pair
+# and the history was mostly bundle churn.
+# NOTE: server.js serves this statically and `npm start` is bare `node server.js`,
+# so a fresh clone has no SPA until someone runs `npm run build`. Deploy and CI
+# must build before starting the panel.
+public/
+
+# packaged release artifacts (npm run package)
+/dist/
+
+# Python bytecode
+__pycache__/
+*.pyc

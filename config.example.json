@@ -1,0 +1,61 @@
+{
+  "appName": "Fleetdeck",
+  "branding": {
+    "name": "",
+    "logoUrl": "",
+    "faviconUrl": "",
+    "accentColor": "",
+    "supportUrl": ""
+  },
+  "gameAccents": {
+    "minecraft": "",
+    "terraria": "",
+    "valheim": "",
+    "palworld": "",
+    "custom": ""
+  },
+  "serverDir": "",
+  "jar": "",
+  "javaArgs": [
+    "-Xmx4G",
+    "-Xms4G"
+  ],
+  "mcVersion": "",
+  "stopTimeoutSeconds": 30,
+  "panelPort": 2121,
+  "panelHost": "127.0.0.1",
+  "geoLanguageDetection": false,
+  "jwtSecret": "CHANGE-THIS-SECRET-TO-SOMETHING-LONG-AND-RANDOM",
+  "sessionHours": 168,
+  "requireAuth": true,
+  "consoleHistoryLines": 500,
+  "playerListIntervalSeconds": 30,
+  "watchdog": {
+    "enabled": false,
+    "maxRestarts": 3,
+    "windowMinutes": 10
+  },
+  "scheduledRestart": {
+    "enabled": false,
+    "cron": "0 4 * * *",
+    "warnMinutes": [
+      5,
+      1
+    ]
+  },
+  "backups": {
+    "dir": "",
+    "maxCount": 10,
+    "maxSizeMB": 0,
+    "scheduledEnabled": false,
+    "scheduledCron": "0 3 * * *",
+    "worlds": [
+      "world",
+      "world_nether",
+      "world_the_end"
+    ]
+  },
+  "servers": [],
+  "activeServerId": null,
+  "users": []
+}

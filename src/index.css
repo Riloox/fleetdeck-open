@@ -1,0 +1,1100 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Hallmark · pre-emit critique: P5 H5 E4 S5 R4 V4 */
+/* Hallmark · genre: atmospheric · macrostructure: Workbench · design-system: design.md · designed-as-app */
+
+@font-face {
+  font-family: 'Saira Condensed';
+  src: url('./assets/fonts/saira-condensed-700.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Saira Condensed';
+  src: url('./assets/fonts/saira-condensed-800.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Saira';
+  src: url('./assets/fonts/saira-400.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Saira';
+  src: url('./assets/fonts/saira-italic-400.ttf') format('truetype');
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Saira';
+  src: url('./assets/fonts/saira-600.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Saira';
+  src: url('./assets/fonts/saira-700.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  src: url('./assets/fonts/ibm-plex-mono-400.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  src: url('./assets/fonts/ibm-plex-mono-600.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Press Start 2P';
+  src: url('./assets/fonts/press-start-2p-400.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@layer base {
+  :root {
+    /* SEMANTICS
+       Every colour here is an alias onto a primitive in tokens.css. Nothing in
+       this block should ever be a literal - if a role needs a value the ramp
+       does not have, the ramp is what is wrong. */
+
+    /* Surfaces and text */
+    --background: var(--coal-3);
+    --foreground: var(--ink-1);
+    --card: var(--coal-4);
+    --card-foreground: var(--ink-1);
+    --popover: var(--coal-5);
+    --popover-foreground: var(--ink-1);
+    --secondary: var(--coal-5);
+    --secondary-foreground: var(--ink-1);
+    --muted: var(--coal-6);
+    --muted-foreground: var(--ink-3);
+    --accent: var(--coal-6);
+    --accent-foreground: var(--ink-1);
+    --border: var(--coal-7);
+    --input: var(--coal-7);
+
+    /* Action. --primary is the single accent; --primary-strong is its hover and
+       pressed partner, one rung down the ramp so a press reads as heat being
+       pushed into the control rather than as an opacity change. */
+    --primary: var(--ember-5);
+    --primary-strong: var(--ember-4);
+    --primary-foreground: var(--ink-on-ember);
+
+    /* Focus rides the top of the ramp, 19 points of lightness clear of
+       --primary. Anything closer and the ring around a focused primary button
+       is the same colour as the button. */
+    --ring: var(--ember-7);
+
+    --destructive: var(--signal-error);
+    --destructive-foreground: var(--ink-1);
+
+    /* Radius aliases for Tailwind. --radius-card / --radius-input /
+       --radius-pill are primitives and live in tokens.css - nothing may be
+       declared in both files. */
+    --radius: var(--radius-card);
+    --radius-sm: 0.125rem;
+    --radius-md: var(--radius-input);
+    --radius-lg: var(--radius-card);
+    --radius-xl: 0.375rem;
+    --radius-2xl: 0.5rem;
+
+    /* Server state. Off-ramp by design - see the note on --signal-* in
+       tokens.css. Never the only cue: every one of these is paired with a
+       label, an icon or a shape at the point of use. */
+    --status-online: var(--signal-online);
+    --status-warn: var(--signal-warn);
+    --status-offline: var(--signal-idle);
+    --status-error: var(--signal-error);
+
+    /* Console / log palette.
+       The blue command echo and magenta chat line are gone. A command the
+       operator typed is the hottest thing in the stream, so it takes the top
+       of the ramp; chat is a mid ember. Warn and error keep the functional
+       signal hues because a warning in a log is the same fact as a warning in
+       the UI and must not be a different colour. */
+    --console-bg: var(--coal-1);
+    --log-info: var(--ink-2);
+    --log-warn: var(--signal-warn);
+    --log-error: var(--signal-error);
+    --log-cmd: var(--ember-7);
+    --log-chat: var(--ember-4);
+    --log-muted: var(--ink-4);
+
+    /* Chart palette.
+       Series 1-4 walk down the ramp with 8-11 points of lightness between
+       them, so they separate in greyscale as well as in colour; series 5 is
+       the online green, kept as one non-ember series so a busy multi-line
+       chart still has a hue break in it. */
+    --chart-1: var(--ember-5);
+    --chart-2: var(--ember-7);
+    --chart-3: var(--ember-3);
+    --chart-4: var(--ember-4);
+    --chart-5: var(--signal-online);
+
+    /* Sidebar surface */
+    --sidebar: var(--coal-2);
+    --sidebar-foreground: var(--ink-2);
+    --sidebar-primary: var(--ember-5);
+    --sidebar-primary-foreground: var(--ink-on-ember);
+    --sidebar-accent: var(--coal-5);
+    --sidebar-accent-foreground: var(--ink-1);
+    --sidebar-border: var(--coal-7);
+    --sidebar-ring: var(--ember-7);
+
+    /* Shared translucent panel.
+       Raised from 0.72 to 0.82: the app mixes `.surface-panel` cards with two
+       dozen opaque `bg-card` sites, and once there is heat behind them a 28%
+       transparency gap makes the two read as different components. The Furnace
+       gradient is painted on the panel itself rather than the backdrop for the
+       same reason - see `.surface-panel` below. */
+    --surface-panel: oklch(var(--coal-4) / 0.82);
+
+    /* Motion. The --ease-* curves are primitives and live in tokens.css. */
+    --ease-spring: var(--ease-out);
+    --duration-fast: 120ms;
+    --duration-base: 180ms;
+    --duration-slow: 280ms;
+    /* Motion roles. Timing expresses consequence: acknowledging a click is
+       near-instant, a state change is readable, and only ignition - a server
+       actually coming alive - is allowed an authored entrance. */
+    --duration-station: 160ms;  /* switching stations (view swap) */
+    --duration-marker: 260ms;   /* the rail marker travelling between items */
+    --duration-ignite: 520ms;   /* the one authored moment: server online */
+
+    /* Tracking. The --text-* scale is a primitive and lives in tokens.css. */
+    --tracking-tight: -0.011em;
+    --tracking-normal: 0;
+    --tracking-wide: 0.04em;
+
+  }
+}
+
+@layer components {
+  /* The heat a surface carries on its own, independent of what is behind it.
+     Split out from `.surface-panel` because the app mixes translucent Cards
+     with opaque `bg-card` panels; if the sheen came from the backdrop, only
+     the translucent ones would get it and two adjacent tiles on the dashboard
+     would stop looking like the same component. */
+  .surface-heat {
+    background-image: linear-gradient(180deg, oklch(var(--ember-4) / 0.055), transparent 38%);
+  }
+
+  .surface-panel {
+    background-color: var(--surface-panel);
+    background-image: linear-gradient(180deg, oklch(var(--ember-4) / 0.055), transparent 38%);
+    box-shadow: var(--shadow-md);
+    backdrop-filter: blur(14px);
+  }
+
+  /* The heated edge under a card header. Brightest where it meets the title
+     and cooling off across the width, like a bar pulled from the forge. */
+  .rule-heated {
+    position: relative;
+  }
+
+  .rule-heated::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    bottom: calc(var(--rule-fine) * -1);
+    height: var(--rule-fine);
+    background: linear-gradient(
+      90deg,
+      oklch(var(--ember-4) / 0.60),
+      oklch(var(--ember-4) / 0.14) 30%,
+      transparent 58%
+    );
+    pointer-events: none;
+  }
+
+  .fleetdeck-toaster[data-sonner-toaster][data-theme='dark'] {
+    --normal-bg: oklch(var(--card) / 0.94);
+    --normal-bg-hover: oklch(var(--secondary) / 0.94);
+    --normal-border: oklch(var(--border));
+    --normal-border-hover: oklch(var(--muted));
+    --normal-text: oklch(var(--foreground));
+
+    /* Four severities that have to stay four severities. Success used to be
+       the accent and info used to be the blue command colour; with the blue
+       evicted, both would have landed on the ember ramp and a failed backup
+       would have looked like a finished one. Success takes the online green -
+       the same colour the panel already uses for "this is up and fine" - and
+       info keeps the accent. */
+    --success-bg: oklch(var(--status-online) / 0.14);
+    --success-border: oklch(var(--status-online) / 0.32);
+    --success-text: oklch(var(--status-online));
+
+    --info-bg: oklch(var(--primary) / 0.12);
+    --info-border: oklch(var(--primary) / 0.30);
+    --info-text: oklch(var(--primary));
+
+    --warning-bg: oklch(var(--status-warn) / 0.14);
+    --warning-border: oklch(var(--status-warn) / 0.32);
+    --warning-text: oklch(var(--status-warn));
+
+    --error-bg: oklch(var(--destructive) / 0.14);
+    --error-border: oklch(var(--destructive) / 0.32);
+    --error-text: oklch(var(--destructive));
+  }
+
+  .fleetdeck-toaster [data-sonner-toast][data-styled='true'] {
+    box-shadow: var(--shadow-xl);
+  }
+
+  .modpack-progress-indeterminate {
+    width: 38%;
+    animation: modpack-progress-slide 1.25s ease-in-out infinite;
+  }
+}
+
+@keyframes modpack-progress-slide {
+  0% { transform: translateX(-110%); }
+  100% { transform: translateX(270%); }
+}
+
+/* Long operations end with a resolution, not a disappearance. An install that
+   ran for four minutes and then silently vanished leaves the user unsure it
+   finished, so the indeterminate sweep resolves to a full determinate bar and
+   holds for a beat before the toast clears. */
+.modpack-progress-settle {
+  width: 100%;
+  transform-origin: left center;
+  animation: modpack-progress-settle var(--duration-slow) var(--ease-out) both;
+}
+
+@keyframes modpack-progress-settle {
+  from { transform: scaleX(0.38); }
+  to   { transform: scaleX(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modpack-progress-indeterminate {
+    animation: none;
+    width: 100%;
+    opacity: 0.45;
+  }
+  .modpack-progress-settle {
+    animation: none;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-size: var(--text-base);
+    line-height: 1.5;
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: oklch(var(--muted-foreground) / 0.4);
+  }
+}
+
+/* Console / terminal.
+   The single declaration for this surface - it used to be split across two
+   blocks in this file that disagreed on the bed (console-black vs paper), and
+   the later one silently won, leaving the log stream lighter than its own
+   composer row. This is the darkest surface in the app by design: streaming
+   text gets maximum contrast and no Furnace treatment behind it. */
+.console-area {
+  height: 62vh;
+  min-height: 24rem;
+  overflow-y: auto;
+  padding: 12px 16px;
+  border: var(--rule-fine) solid oklch(var(--border));
+  border-radius: var(--radius-card);
+  font-family: var(--font-outlier);
+  font-size: 13px;
+  line-height: 1.55;
+  background: oklch(var(--console-bg));
+  color: oklch(var(--muted-foreground));
+}
+/* These now read the same --log-* tokens as the level bar that renders on the
+   same line (see LEVEL_BAR in ConsoleView). They used to be a second, private
+   palette: chat and cmd were both painted the one accent here while the bar
+   beside them was blue and magenta, so a single line disagreed with itself. */
+.console-area .l-info  { color: oklch(var(--log-info)); }
+.console-area .l-warn  { color: oklch(var(--log-warn)); }
+.console-area .l-error { color: oklch(var(--log-error)); }
+.console-area .l-chat  { color: oklch(var(--log-chat)); }
+.console-area .l-cmd   { color: oklch(var(--log-cmd)); font-weight: 600; }
+.console-area .l-plain { color: oklch(var(--foreground)); }
+/* 0.8, not the 0.55 this used to be: at 0.55 a stack frame measured 2.83:1 on
+   the console bed, well under AA, and a stack trace is the text you most need
+   to read when something has gone wrong. It is still clearly subordinate to
+   .l-plain (5.0 against 17.9). */
+.console-area .l-stack { color: oklch(var(--muted-foreground) / 0.8); font-style: italic; }
+.console-area .l-system{ color: oklch(var(--primary)); font-weight: 600; }
+
+/* ---------------------------------------------------------------------------
+   Server lifecycle: offline -> starting -> online -> stopping -> offline
+   ---------------------------------------------------------------------------
+   The one thing a person running this panel actually waits for is a server
+   coming alive, so that transition is the only place in the app that gets an
+   authored moment. Three distinct behaviours, each meaning something different:
+
+     working (starting/stopping) - a slow, soft breath. Uncertain, in progress.
+     ignition (-> online)        - a single hard ring, fired once on the edge.
+     online                      - a steady ping. Alive, and still alive.
+
+   The breath and the ping are deliberately different shapes as well as
+   different hues, so "working" is never mistaken for "up" at a glance or by
+   someone who can't separate the amber from the green.
+   --------------------------------------------------------------------------- */
+
+/* Steady online ping. The single ping rhythm in the app - anything that wants
+   to read as "live right now" uses this, so the desk has one heartbeat rather
+   than several competing ones. */
+@keyframes pulse-ring {
+  0%   { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+/* Attention halo for a non-status signal (unread notifications). Same rhythm
+   and easing as the status ping so the two never look like different systems. */
+.ping-halo {
+  animation: pulse-ring 1.4s var(--ease-out) infinite;
+}
+
+.status-dot {
+  position: relative;
+  display: flex;
+  flex: none;
+  height: 0.375rem;
+  width: 0.375rem;
+}
+
+.status-dot__core {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  border-radius: 9999px;
+  background: currentColor;
+  transition: background-color var(--duration-slow) var(--ease-out);
+}
+
+/* The halo layer. Nothing runs here unless the server is doing something. */
+.status-dot__halo {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.status-dot--online .status-dot__halo {
+  background: currentColor;
+  animation: pulse-ring 1.4s var(--ease-out) infinite;
+}
+
+/* A live server emits light. `currentColor` again, so this is the online green
+   on a running server and the warn amber while it is coming up - the dot never
+   glows in a colour the pill beside it is not already using. */
+.status-dot--online .status-dot__core {
+  box-shadow:
+    0 0 3px 0 currentColor,
+    0 0 9px 0 color-mix(in oklch, currentColor 62%, transparent);
+}
+
+/* Starting / stopping. Slower, eased in *and* out, and it never fully clears -
+   the shape reads as effort rather than as a heartbeat. */
+/* Hairline, not the 2px structural rule: these rings get scaled up to ~4x, and
+   a border scales with the transform - 2px would land as an 8px blob. */
+.status-dot--working .status-dot__halo {
+  border: var(--rule-hair) solid currentColor;
+  animation: status-breath 1.9s var(--ease-in-out) infinite;
+}
+
+@keyframes status-breath {
+  0%, 100% { transform: scale(1);    opacity: 0.55; }
+  50%      { transform: scale(1.85); opacity: 0.08; }
+}
+
+/* Ignition: fired once, on the real offline/starting -> online edge. A hard
+   ring thrown off the dot, plus a brief overshoot of the core itself. This is
+   the authored moment - it exists so that a server finishing its startup is
+   something you *see* happen, not something you notice later. */
+.status-dot--ignite .status-dot__core {
+  animation: status-ignite-core var(--duration-ignite) var(--ease-out);
+}
+
+.status-dot--ignite .status-dot__ignition {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: var(--rule-hair) solid currentColor;
+  pointer-events: none;
+  animation: status-ignite-ring var(--duration-ignite) var(--ease-out) forwards;
+}
+
+@keyframes status-ignite-ring {
+  from { transform: scale(1);   opacity: 0.9; }
+  to   { transform: scale(4.2); opacity: 0; }
+}
+
+/* Ignition throws heat as well as a ring - the core flares, blooms, and settles
+   back to the steady glow. This is the one authored moment in the app and the
+   only place the bloom is allowed to move. */
+@keyframes status-ignite-core {
+  0% {
+    transform: scale(1);
+    filter: brightness(1);
+    box-shadow: 0 0 0 0 transparent;
+  }
+  38% {
+    transform: scale(1.85);
+    filter: brightness(1.65);
+    box-shadow: 0 0 16px 2px currentColor;
+  }
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+    box-shadow: 0 0 3px 0 currentColor;
+  }
+}
+
+/* The pill's colour crossfades rather than snapping, so a state change reads as
+   one continuous thing settling instead of two unrelated frames. */
+.status-pill {
+  transition:
+    color var(--duration-slow) var(--ease-out),
+    background-color var(--duration-slow) var(--ease-out),
+    border-color var(--duration-slow) var(--ease-out);
+}
+
+/* The floating dock re-arms when the available actions change (start becomes
+   restart+stop, and back). The controls are swapping underneath the pointer, so
+   they announce themselves rather than silently appearing under the cursor. */
+@keyframes dock-arm {
+  from { opacity: 0; transform: scale(0.86); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.dock-arm {
+  animation: dock-arm var(--duration-station) var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* No looping halo at all: state is already carried by hue, by the pill's
+     text, and by the dot itself. Ignition collapses to the core's colour
+     change, which the crossfade above still performs. */
+  .status-dot__halo,
+  .status-dot--ignite .status-dot__ignition,
+  .status-dot--ignite .status-dot__core {
+    animation: none !important;
+  }
+  /* Without the ping, "online" would fall back to hue alone on the bare dots in
+     the server selector. A static hairline ring keeps a second, non-colour
+     channel: live servers wear a ring, everything else does not. */
+  .status-dot--online .status-dot__halo {
+    background: transparent;
+    border: var(--rule-hair) solid currentColor;
+    opacity: 0.5;
+  }
+  .dock-arm,
+  .ping-halo {
+    animation: none;
+  }
+}
+
+/* Login: a two-pane desk. The left pane is the identity/atmosphere side and
+   sits one tonal step behind the working column on the right. */
+/* The identity pane is the one surface with no work on it, so it takes the
+   fullest heat in the app: a low bank of coals along the bottom edge and a
+   faint catch at the top-left where the lockup sits. */
+.login-desk {
+  background:
+    radial-gradient(112% 46% at 22% 104%, oklch(var(--ember-2) / 0.30), transparent 70%),
+    radial-gradient(58% 34% at 6% -6%, oklch(var(--ember-4) / 0.10), transparent 72%),
+    oklch(var(--sidebar));
+}
+
+.login-brand-lockup {
+  width: min(100%, 30rem);
+}
+
+.login-brand-line {
+  height: var(--rule-hair);
+  flex: 1;
+  background: linear-gradient(90deg, oklch(var(--primary) / 0.65), transparent);
+}
+
+/* The headline is the one theatrical moment on the sign-in surface. The offset
+   echo reads like a second print pass on a machine label. It is drawn with
+   stacked text shadows rather than a duplicated layer, so it tracks the live
+   face glyph for glyph however the string wraps in any language. */
+.login-tagline {
+  position: relative;
+  isolation: isolate;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+  text-shadow:
+    0.035em 0.045em 0 oklch(var(--primary) / 0.3),
+    0.085em 0.105em 0 oklch(var(--primary) / 0.16);
+}
+
+.login-wave-word,
+.login-wave-character,
+.login-wave-space {
+  display: inline-block;
+}
+
+.login-wave-word {
+  white-space: nowrap;
+}
+
+.login-wave-character {
+  animation: login-text-wave 3.6s var(--ease-in-out) infinite;
+  animation-delay: calc(var(--wave-index) * 55ms);
+  will-change: transform;
+}
+
+.login-wave-space {
+  width: 0.28em;
+}
+
+@keyframes login-text-wave {
+  0%, 100% { transform: translateY(0); }
+  20%      { transform: translateY(-0.13em); }
+  40%      { transform: translateY(0.055em); }
+  58%      { transform: translateY(0); }
+}
+
+.login-form {
+  position: relative;
+}
+
+.login-form::before,
+.login-form::after {
+  content: '';
+  position: absolute;
+  left: -1.25rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  pointer-events: none;
+}
+
+.login-form::before {
+  top: calc(50% - 15.5rem);
+  border-top: var(--rule-fine) solid oklch(var(--primary));
+  border-left: var(--rule-fine) solid oklch(var(--primary));
+}
+
+.login-form::after {
+  bottom: calc(50% - 15.5rem);
+  border-bottom: var(--rule-fine) solid oklch(var(--border));
+  border-left: var(--rule-fine) solid oklch(var(--border));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-wave-character {
+    animation: none;
+  }
+}
+
+@media (max-width: 1023px) {
+  .login-form::before,
+  .login-form::after {
+    display: none;
+  }
+}
+
+/* Machine-fact rows: what the browser can vouch for before sign-in. */
+.login-plate {
+  border-top: var(--rule-hair) solid oklch(var(--border));
+}
+.login-plate > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding-block: 0.5rem;
+  border-bottom: var(--rule-hair) solid oklch(var(--border));
+}
+.login-plate dt {
+  font-size: var(--text-label);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: oklch(var(--muted-foreground));
+}
+.login-plate dd {
+  font-size: 12.5px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+/* Handoff: the desk lights bloom out and the screen dissolves into the next
+   surface, which resolves from the same dark background on mount. */
+.login-leaving {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 620ms var(--ease-out);
+}
+
+@keyframes game-catalogue-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes game-catalogue-artwork-enter {
+  from { transform: scale(1.025); }
+  to { transform: scale(1); }
+}
+
+.game-catalogue-enter {
+  animation: game-catalogue-enter 780ms var(--ease-out) both;
+}
+
+.game-catalogue-enter .game-carousel-artwork {
+  animation: game-catalogue-artwork-enter 1100ms var(--ease-out) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-catalogue-enter,
+  .game-catalogue-enter .game-carousel-artwork {
+    animation: none;
+  }
+}
+/* Fleetdeck wordmark. Also previously declared twice; the surviving values are
+   the ones that were actually winning. The old `-webkit-font-smoothing: none`
+   is gone with its stale "keep the pixel art crisp" comment - the mark has not
+   been pixel art for a while, and disabling antialiasing on 13px display-weight
+   800 just rendered it jagged. */
+.brand-wordmark {
+  font-family: var(--font-brand);
+  font-size: var(--text-brand);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: var(--tracking-brand);
+  text-transform: uppercase;
+  color: oklch(var(--foreground));
+  text-shadow: none;
+  white-space: nowrap;
+}
+
+/* Abstract stacked-deck glyph, embedded to avoid a raster brand dependency. */
+.brand-icon {
+  display: block;
+  width: 28px;
+  height: 28px;
+  background: center / contain no-repeat url('/resources/fleetdeck.svg');
+  border-radius: 6px;
+  box-shadow: none;
+  flex: none;
+}
+
+/* A configured logo (config.branding.logoUrl) is an <img>, so it carries its
+   own pixels and must not also paint the built-in glyph behind them. Width is
+   released because a provider's wordmark-style mark is usually wider than
+   tall; the height is what keeps it on the sidebar's rhythm. */
+.brand-icon--custom {
+  background: none;
+  width: auto;
+  max-width: 120px;
+  object-fit: contain;
+}
+
+/* 3D spinning Fleetdeck cube */
+.ls-cube-scene {
+  width: var(--cube-size, 96px);
+  height: var(--cube-size, 96px);
+  perspective: calc(var(--cube-size, 96px) * 4);
+  flex: none;
+}
+.ls-cube {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  animation: none;
+  transform: rotateX(-22deg) rotateY(-32deg);
+}
+.ls-cube__face {
+  position: absolute;
+  /* Faces are 1px larger than the cube on every edge so neighbours overlap
+     slightly - this closes the sub-pixel hairline seams at the corners. */
+  inset: -1px;
+  background-color: oklch(var(--card));
+  background-image: url('/resources/fleetdeck.svg');
+  background-size: cover;
+  backface-visibility: hidden;
+}
+/* The translateZ offset must match the true half-edge (size / 2), independent
+   of the 1px overlap above, so the cube stays a perfect cube. */
+.ls-cube__face--front  { transform: rotateY(0deg)    translateZ(calc(var(--cube-size, 96px) / 2)); }
+.ls-cube__face--back   { transform: rotateY(180deg)  translateZ(calc(var(--cube-size, 96px) / 2)); }
+.ls-cube__face--right  { transform: rotateY(90deg)   translateZ(calc(var(--cube-size, 96px) / 2)); }
+.ls-cube__face--left   { transform: rotateY(-90deg)  translateZ(calc(var(--cube-size, 96px) / 2)); }
+.ls-cube__face--top    { transform: rotateX(90deg)   translateZ(calc(var(--cube-size, 96px) / 2)); }
+.ls-cube__face--bottom { transform: rotateX(-90deg)  translateZ(calc(var(--cube-size, 96px) / 2)); }
+
+/* Directional shading: a single virtual light from the upper-front-left.
+   Each face gets (a) a flat brightness tint for its orientation and (b) a soft
+   gradient overlay for gentle face-to-edge ambient occlusion, so the 3D form
+   reads even though all six faces share one texture. */
+.ls-cube__face::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--face-shade, transparent);
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+.ls-cube__face--front  { filter: brightness(1.02); --face-shade: linear-gradient(160deg, oklch(var(--foreground) / 0.06), oklch(var(--background) / 0.10)); }
+.ls-cube__face--right  { filter: brightness(0.74); --face-shade: linear-gradient(90deg, oklch(var(--background) / 0.02), oklch(var(--background) / 0.28)); }
+.ls-cube__face--left   { filter: brightness(0.86); --face-shade: linear-gradient(270deg, oklch(var(--background) / 0.04), oklch(var(--background) / 0.18)); }
+.ls-cube__face--top    { filter: brightness(1.28); --face-shade: linear-gradient(180deg, oklch(var(--foreground) / 0.12), oklch(var(--background) / 0.04)); }
+.ls-cube__face--bottom { filter: brightness(0.5); --face-shade: linear-gradient(0deg, oklch(var(--background) / 0.30), oklch(var(--background) / 0.10)); }
+.ls-cube__face--back   { filter: brightness(0.66); --face-shade: linear-gradient(160deg, oklch(var(--background) / 0.08), oklch(var(--background) / 0.22)); }
+
+@keyframes ls-cube-spin {
+  from { transform: rotateX(-22deg) rotateY(0deg); }
+  to   { transform: rotateX(-22deg) rotateY(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ls-cube { animation: none; transform: rotateX(-22deg) rotateY(-32deg); }
+}
+
+/* AppShell fades in on mount. The previous version ended with
+   `filter: grayscale(0%)` and `animation-fill-mode: both`, which left a
+   permanent `filter` on the outer flex container. A non-`none` filter on
+   an ancestor of a `position: sticky` element makes that ancestor the
+   containing block and prevents the sticky child from sticking relative
+   to the viewport, so the main sidebar scrolled out with the page. The
+   fade-in is preserved via opacity only. */
+@keyframes app-shell-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.app-shell-enter {
+  animation: app-shell-enter 900ms var(--ease-out) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-shell-enter {
+    animation: none;
+  }
+}
+
+/* Station switch: the working surface settles into place. The rail marker
+   (see `.fleet-rail-marker`) carries the continuity between stations, so the
+   surface itself only needs to confirm that it changed - this is an operate
+   surface and the user is already looking at where they clicked. Short, small,
+   and never enough to make them wait. */
+@keyframes surface-settle {
+  from { opacity: 0; transform: translateY(3px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.view-enter {
+  animation: surface-settle var(--duration-station) var(--ease-out);
+}
+
+/* Dialogs arrive where they already are.
+   A centred dialog carries `translate(-50%, -50%)` as its own transform, and
+   the animate-in / zoom-in utilities animate `transform` from a value that
+   does not include it - so the panel started at the middle of the screen by
+   its top-left corner and slid up and left into place, reading as a box thrown
+   in from the bottom right. Restating the centring inside the keyframes is
+   what fixes it: the only thing that moves is the scale.
+
+   It rises the same 3px `.view-enter` does and settles on the same curve, so
+   opening a dialog and switching stations are the same gesture at two sizes.
+   Leaving is faster and eases in, the way everything in the app that is on its
+   way out does. */
+@keyframes dialog-panel-in {
+  from { opacity: 0; transform: translate(-50%, calc(-50% + 3px)) scale(0.975); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes dialog-panel-out {
+  from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  to   { opacity: 0; transform: translate(-50%, -50%) scale(0.985); }
+}
+.dialog-panel[data-state='open'] {
+  animation: dialog-panel-in var(--duration-base) var(--ease-out);
+}
+.dialog-panel[data-state='closed'] {
+  animation: dialog-panel-out var(--duration-fast) var(--ease-in);
+}
+@media (prefers-reduced-motion: reduce) {
+  .dialog-panel[data-state='open'],
+  .dialog-panel[data-state='closed'] {
+    animation: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   The rail marker: one desk, not a stack of pages
+   ---------------------------------------------------------------------------
+   A single amber edge marker owned by the rail itself, which travels to the
+   active station instead of being redrawn on whichever item happens to be
+   selected. It is the app's one piece of shared-element motion, and it is what
+   makes moving between stations feel like turning to face a different part of
+   the same desk.
+
+   Both travel and length are transform-only (`scaleY` against a 1px bar with a
+   top origin), so nothing here touches layout.
+   --------------------------------------------------------------------------- */
+.fleet-rail {
+  position: relative;
+}
+
+.fleet-rail-marker {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--rule-fine);
+  height: 1px;
+  /* The marker is the hottest edge on the rail: it runs down the ramp from
+     white-hot to ember and throws a little light onto the sidebar beside it. */
+  background: linear-gradient(180deg, oklch(var(--ember-6)), oklch(var(--ember-4)));
+  box-shadow: 0 0 9px 0 oklch(var(--ember-5) / 0.60);
+  border-radius: 9999px;
+  transform-origin: top;
+  transform: translateY(var(--marker-y, 0)) scaleY(var(--marker-h, 0));
+  opacity: var(--marker-opacity, 0);
+  pointer-events: none;
+  transition:
+    transform var(--duration-marker) var(--ease-out),
+    opacity var(--duration-station) var(--ease-out);
+}
+
+/* First paint, and any move caused by the rail itself resizing or a group
+   collapsing, place the marker without travel - it would read as the marker
+   sliding to somewhere the user did not navigate. */
+.fleet-rail-marker[data-instant='true'] {
+  transition: none;
+}
+
+/* ---------------------------------------------------------------------------
+   Console: making a fast stream legible
+   ---------------------------------------------------------------------------
+   Log lines arrive already visible - nothing fades text in, because text you
+   have to wait for is text you can't read. The only motion is on arrival of a
+   line that is worth catching as it goes past, and it happens on the level bar
+   and the row wash, never on the glyphs themselves.
+   --------------------------------------------------------------------------- */
+.console-line__bar {
+  transform-origin: left center;
+}
+
+.console-line--report .console-line__bar {
+  animation: console-bar-report 900ms var(--ease-out);
+}
+
+@keyframes console-bar-report {
+  0%   { transform: scaleX(1); }
+  14%  { transform: scaleX(3.2); }
+  100% { transform: scaleX(1); }
+}
+
+/* Errors additionally wash the whole row once, so one red line in a burst of
+   two hundred is something you see arrive rather than something you scroll
+   back to find. */
+.console-line--error-report {
+  animation: console-row-report 1100ms var(--ease-out);
+}
+
+@keyframes console-row-report {
+  from { background-color: oklch(var(--log-error) / 0.16); }
+  to   { background-color: transparent; }
+}
+
+/* Jump-to-live. It appears because the user scrolled away from the tail, so it
+   arrives from the direction it will send them. */
+.console-jump {
+  animation: console-jump-in var(--duration-base) var(--ease-out);
+}
+
+@keyframes console-jump-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.9); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .console-line--report .console-line__bar,
+  .console-line--error-report,
+  .console-jump {
+    animation: none !important;
+  }
+  .fleet-rail-marker {
+    transition: none;
+  }
+}
+
+/* Fleetdeck Workbench system */
+html,
+body {
+  overflow-x: clip;
+}
+
+/* No `background` here on purpose. The base layer above already applies
+   `bg-background`; declaring the bed a second time from a different token was
+   what let the body, the app shell and `.app-environment-shade` drift apart. */
+body {
+  min-width: 320px;
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-family: var(--font-display);
+  font-style: normal;
+}
+
+/* Tailwind's preflight points `code, kbd, samp, pre` at the mono family. That
+   is the right default for a document, but in this app those tags mark short
+   inline values - a scheduled-task trigger, a keycap, a connection string - and
+   monospace there was the costume, not the content. They take the body face
+   with tabular figures so digits still line up in a column; `pre` is left alone
+   because the surfaces that use it (the diff pane) really are code, and the
+   console and editors set `font-mono` explicitly, which wins over this. */
+code,
+kbd,
+samp {
+  font-family: var(--font-body);
+  font-variant-numeric: tabular-nums;
+}
+
+button,
+a,
+[role='button'] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:focus-visible {
+  outline-color: oklch(var(--ring));
+  outline-offset: 3px;
+}
+
+/* The forge bed.
+   Layer order matters: the artwork scrim is the *bottom* layer and goes fully
+   opaque at 26rem, so the ember layers have to sit above it or the heat would
+   visibly stop at that line. A slow rise from the bottom edge of the viewport
+   carries most of it, with a weak high corner catch for asymmetry.
+
+   Deliberately wide and weak. This sits behind a full screen of working text,
+   and it is the one place in the app where an ambient effect is allowed to
+   touch the content bed at all. */
+.app-environment-shade {
+  background:
+    radial-gradient(128% 58% at 50% 106%, oklch(var(--ember-2) / 0.22), transparent 66%),
+    radial-gradient(76% 42% at 88% 4%, oklch(var(--ember-4) / 0.07), transparent 72%),
+    linear-gradient(
+      to bottom,
+      transparent 0%,
+      oklch(var(--background) / 0.78) 13rem,
+      oklch(var(--background)) 26rem
+    );
+}
+
+@media (max-width: 47.99rem) {
+  .fleet-sidebar {
+    width: 52px !important;
+  }
+
+  .fleet-sidebar nav {
+    padding-inline: var(--space-2xs);
+  }
+
+  .fleet-sidebar nav button,
+  .fleet-sidebar > div:last-child button {
+    min-height: 44px !important;
+    justify-content: center !important;
+    padding-inline: 0 !important;
+  }
+
+  .fleet-sidebar nav button > span,
+  .fleet-sidebar nav button > svg:last-child,
+  .fleet-sidebar nav > div > button,
+  .fleet-sidebar > div:last-child button > :not(svg) {
+    display: none !important;
+  }
+
+  .app-main {
+    padding-left: 52px !important;
+  }
+
+  button,
+  [role='button'],
+  a[role='button'] {
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 25.875rem) {
+  .console-area {
+    padding: var(--space-xs);
+    font-size: var(--text-xs);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 150ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 150ms !important;
+  }
+
+  .view-enter {
+    transform: none !important;
+    animation-name: app-shell-enter !important;
+  }
+}

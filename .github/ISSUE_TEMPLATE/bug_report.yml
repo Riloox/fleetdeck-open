@@ -1,0 +1,41 @@
+name: Bug report
+description: Something is broken. File a bug report.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you expected to happen and what actually happened.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The smallest set of steps that triggers the problem.
+      placeholder: |
+        1. Open the servers view
+        2. Click Start
+        3. See the error
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, panel version, game and version, how you installed it.
+      placeholder: |
+        OS: Windows 11 / Ubuntu 24.04 / ...
+        Panel version: 0.1.0
+        Game: Minecraft Paper 1.21.x / ...
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Panel console output, server logs, or the error text. Redact secrets.
+      render: shell
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I checked the README and existing issues first

@@ -1,0 +1,12 @@
+# variant=tshock version=TShock 6.1.0.0 for Terraria 1.4.5.6 host=linux-x64 (Debian 13) captured=2026-07-25 source=github.com/Pryaxis/TShock
+> exit
+Server executed: /exit.
+Saving world data:
+
+Validating world save:
+Backing up world file
+Server shutting down!
+Saving before exit...
+Saving world data:
+Validating world save:
+# process exited: code=0 signal=null

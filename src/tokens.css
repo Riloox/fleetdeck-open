@@ -1,0 +1,323 @@
+/* Hallmark · genre: atmospheric · macrostructure: Workbench · design-system: design.md · designed-as-app */
+/* ---------------------------------------------------------------------------
+   PER-GAME THEMES
+
+   Entering a game re-tints the whole app in that game's own colour. The hue
+   is not invented: it is measured off the game's hero artwork - every pixel
+   converted to OKLCH, binned by hue, weighted by chroma squared and lightness
+   so that saturated, lit surfaces count for more than mud, then the dominant
+   sector is taken as the game's voice.
+
+           artwork          dominant sector            hue
+           minecraft        firelight / sunset  80%     52
+           terraria         sky                 55%    210
+           valheim          fog-lit forest      (re-tuned to 280 for identity - see below)
+           palworld         grass and foliage   44%    128
+           custom           greyscale                    -
+
+   What each theme overrides is the RAMP, never the structure. The ember ramp's
+   seven lightness rungs (30/45/56/66/74/82/93) and the coal and ink ladders
+   are reproduced exactly at the new hue; only chroma is re-fitted, clamped to
+   96% of what sRGB can hold at that hue and lightness so no rung is silently
+   clipped by the browser. Because every semantic role in `src/index.css`
+   aliases these primitives - primary, ring, charts, sidebar, bloom, logs - a
+   game theme reaches every surface in the app without a single role being
+   restated here, and every contrast pair the default theme passes, these pass
+   too (text on card 6.9:1, accent on background 9.0:1, dark text on the
+   accent fill 8.9:1).
+
+   Minecraft and Custom are absent on purpose. Minecraft's artwork measures
+   hue 52, which is the ember ramp already - restating it would be two hundred
+   lines saying nothing. The Custom slide's artwork is greyscale (mean chroma
+   0.0001), so it has no dominant colour to take, and it keeps the app's
+   default heat.
+
+   Valheim is the one deliberate exception: its fog measured at hue 234,
+   24 degrees off Terraria's sky (210) - distinguishable at the accent,
+   identical at the desk. The hue is re-tuned to 280 (violet-blue) so
+   the two blue games read as distinct themes.
+
+   These blocks sit on `[data-game]`, which `src/App.jsx` mirrors onto
+   <html> - portalled dialogs, dropdowns and toasts render outside the shell
+   and would otherwise stay on the default ramp. The carousel sets it per
+   slide as well, so the picker previews each game's colour as you swipe. */
+
+:root {
+  /* The picker's own accent: the SIGNAL rung of whatever ramp is in scope. Per
+     slide, that is the game's own colour, so the carousel's scrim, logo glow
+     and arrow hover now carry the same hue the panel behind them will. */
+  --game-accent: var(--ember-5);
+}
+
+/* Custom keeps the exception it always had: the palest, least saturated rung.
+   A slide with no game identity should not look like it has one, and its
+   artwork is greyscale, so there is no colour there to take. */
+[data-game='custom'] { --game-accent: var(--ember-7); }
+
+/* Terraria - the sky the artwork is two thirds made of. */
+[data-game='terraria'] {
+  --ember-1: 30% 0.049 198;
+  --ember-2: 45% 0.073 198;
+  --ember-3: 56% 0.091 200;
+  --ember-4: 66% 0.108 206;
+  --ember-5: 74% 0.123 210;
+  --ember-6: 82% 0.135 216;
+  --ember-7: 93% 0.043 226;
+
+  --coal-1: 8.5% 0.014 218;
+  --coal-2: 10% 0.016 218;
+  --coal-3: 12.5% 0.018 218;
+  --coal-4: 16.5% 0.020 218;
+  --coal-5: 21% 0.024 218;
+  --coal-6: 25% 0.028 218;
+  --coal-7: 30% 0.032 218;
+  --coal-8: 39% 0.034 218;
+
+  --ink-1: 95% 0.014 225;
+  --ink-2: 80% 0.016 220;
+  --ink-3: 69% 0.018 215;
+  --ink-4: 50% 0.018 205;
+  --ink-on-ember: 13% 0.020 218;
+}
+
+/* Valheim - re-tuned to violet-blue for identity. The fog measured at hue
+   234 sat 24 degrees off Terraria's sky (210) - distinguishable at the
+   accent, identical at desk chroma - so the hue is deliberately re-tuned to
+   280, the one exception to the measured-hue rule above. Chroma keeps the
+   original fog profile except ember-5/6, which the violet hues cannot hold
+   (0.149/0.097 would clip; 0.131/0.090 are the 96% gamut ceilings). */
+[data-game='valheim'] {
+  --ember-1: 30% 0.053 268;
+  --ember-2: 45% 0.080 268;
+  --ember-3: 56% 0.101 270;
+  --ember-4: 66% 0.126 276;
+  --ember-5: 74% 0.131 280;
+  --ember-6: 82% 0.090 286;
+  --ember-7: 93% 0.034 296;
+
+  --coal-1: 8.5% 0.014 288;
+  --coal-2: 10% 0.016 288;
+  --coal-3: 12.5% 0.018 288;
+  --coal-4: 16.5% 0.020 288;
+  --coal-5: 21% 0.024 288;
+  --coal-6: 25% 0.028 288;
+  --coal-7: 30% 0.032 288;
+  --coal-8: 39% 0.034 288;
+
+  --ink-1: 95% 0.014 295;
+  --ink-2: 80% 0.016 290;
+  --ink-3: 69% 0.018 285;
+  --ink-4: 50% 0.018 275;
+  --ink-on-ember: 13% 0.020 288;
+}
+
+/* Palworld - grass and foliage. The artwork peaks twice in the greens, at 92
+   (sunlit fur and grass highlights) and 135 (leaf mass); the ramp takes 128,
+   the foliage reading pulled a little toward the highlights. Below about 120
+   the light rungs turn olive, which is the sunlight and not the field. */
+[data-game='palworld'] {
+  --ember-1: 30% 0.055 116;
+  --ember-2: 45% 0.099 116;
+  --ember-3: 56% 0.125 118;
+  --ember-4: 66% 0.157 124;
+  --ember-5: 74% 0.170 128;
+  --ember-6: 82% 0.135 134;
+  --ember-7: 93% 0.062 144;
+
+  --coal-1: 8.5% 0.014 136;
+  --coal-2: 10% 0.016 136;
+  --coal-3: 12.5% 0.018 136;
+  --coal-4: 16.5% 0.020 136;
+  --coal-5: 21% 0.024 136;
+  --coal-6: 25% 0.028 136;
+  --coal-7: 30% 0.032 136;
+  --coal-8: 39% 0.034 136;
+
+  --ink-1: 95% 0.014 143;
+  --ink-2: 80% 0.016 138;
+  --ink-3: 69% 0.018 133;
+  --ink-4: 50% 0.018 123;
+  --ink-on-ember: 13% 0.020 136;
+
+  /* The one signal that has to move. --signal-online at hue 148 lands 20
+     degrees off this accent, which is not enough separation for "that server
+     is up" against "that button is the primary action" - the whole reason the
+     signals are kept off the ramp. Rotated to 165 it is 37 degrees clear,
+     the same margin --signal-warn holds against the default accent, and it is
+     still unambiguously the green that means running. */
+  --signal-online: 76% 0.153 165;
+}
+
+.game-catalogue {
+  background: oklch(var(--background));
+}
+
+.game-carousel {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: oklch(var(--background));
+}
+
+/* The track is one viewport wide and each slide is placed at its own multiple
+   of that width, rather than the slides being laid out in a row inside a track
+   as wide as the catalogue. That is what lets the carousel run endlessly: the
+   view renders a moving window of slides around an unbounded position, so the
+   track only ever travels one width per step and never has to rewind to get
+   from the last game back to the first. */
+.game-carousel-track {
+  position: absolute;
+  inset: 0;
+  transition: transform var(--duration-slow) var(--ease-out);
+  will-change: transform;
+}
+
+.game-carousel-slide {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.game-carousel-artwork {
+  transition: transform var(--duration-slow) var(--ease-out);
+}
+
+.game-carousel-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, oklch(var(--game-accent) / 0.10), oklch(var(--background)) 92%);
+  pointer-events: none;
+}
+
+.game-carousel-content {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.game-carousel-content-custom {
+  align-items: flex-end;
+  padding-bottom: clamp(4.5rem, 13vh, 9rem);
+}
+
+.game-carousel-mark {
+  opacity: 0.96;
+  filter: drop-shadow(0 0 26px oklch(var(--game-accent) / 0.32));
+}
+
+.game-carousel-scanlines {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0 2px,
+    oklch(var(--background) / 0.22) 2px 4px
+  );
+  pointer-events: none;
+}
+
+.game-carousel-pixel-title {
+  line-height: 1.9;
+  text-shadow:
+    0 0 24px oklch(var(--game-accent) / 0.45),
+    0 3px 0 oklch(var(--background) / 0.85);
+}
+
+.game-carousel-start-hint {
+  animation: game-start-blink 1.2s steps(2, start) infinite;
+}
+
+@keyframes game-start-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0.15; }
+}
+
+/* On the picker the wordmark sits directly on full-bleed artwork, so it is
+   white and stays white. It used to flip between --background and --foreground
+   per slide, which made the brand appear to change colour as you swiped. This
+   is the one literal in the file on purpose: it is not a themed role taking a
+   value from the ramp, it is white on a photograph. The shadow carries it over
+   the bright slides (Terraria's sky, Palworld's clouds) that the dark variant
+   existed to survive. */
+.game-carousel-brand .brand-wordmark {
+  color: oklch(100% 0 0);
+  text-shadow:
+    0 1px 2px oklch(0% 0 0 / 0.55),
+    0 2px 10px oklch(0% 0 0 / 0.45);
+}
+
+.game-carousel-arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem;
+  border: none;
+  background: transparent;
+  color: oklch(var(--foreground) / 0.8);
+  transform: translateY(-50%);
+  transition: color var(--duration-fast) var(--ease-out), opacity var(--duration-fast) var(--ease-out);
+}
+
+.game-carousel-arrow:hover {
+  color: oklch(var(--game-accent));
+}
+
+.game-carousel-arrow:active {
+  opacity: 0.55;
+}
+
+.game-carousel-arrow-icon {
+  display: flex;
+  filter: drop-shadow(0 1px 8px oklch(var(--background) / 0.7));
+}
+
+.game-carousel-arrow-prev .game-carousel-arrow-icon {
+  animation: game-arrow-nudge-prev 1.6s var(--ease-in-out) infinite;
+}
+
+.game-carousel-arrow-next .game-carousel-arrow-icon {
+  animation: game-arrow-nudge-next 1.6s var(--ease-in-out) infinite;
+}
+
+@keyframes game-arrow-nudge-prev {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(-8px); }
+}
+
+@keyframes game-arrow-nudge-next {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(8px); }
+}
+
+.game-carousel-arrow-prev {
+  left: 1rem;
+}
+
+.game-carousel-arrow-next {
+  right: 1rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-carousel-track,
+  .game-carousel-artwork {
+    transition-duration: 150ms !important;
+  }
+
+  .game-carousel-arrow-icon {
+    animation: none !important;
+  }
+
+  .game-carousel-start-hint {
+    animation: none !important;
+  }
+}

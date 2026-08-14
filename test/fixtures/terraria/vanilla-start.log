@@ -1,0 +1,52 @@
+# variant=vanilla version=1.4.5.6 host=linux-x64 (Debian 13) captured=2026-07-25 source=terraria.org dedicated server
+Error Logging Enabled.
+
+Terraria Server v1.4.5.6
+
+Resetting game objects 1%
+Resetting game objects 2%
+Resetting game objects 3%
+# ... 97 more identical progress ticks elided ...
+Loading world data: 1%
+Loading world data: 2%
+Loading world data: 3%
+# ... 97 more identical progress ticks elided ...
+Settling liquids 1%
+Settling liquids 2%
+Settling liquids 3%
+# ... 47 more identical progress ticks elided ...
+Terraria Server v1.4.5.6
+
+Listening on port 7777
+Type 'help' for a list of commands.
+
+: Server started
+> playing
+No players connected.
+: 
+> version
+Terraria Server v1.4.5.6
+: 
+> time
+Time: 8:15 AM
+: 
+> port
+Port: 7777
+: 
+> maxplayers
+Player limit: 8
+: 
+> save
+Saving world data: 5%
+Saving world data: 26%
+Saving world data: 53%
+# ... 2 more identical progress ticks elided ...
+Validating world save: 47%
+: Backing up world file
+[REDACTED_IP]:59488 is connecting...
+Saving world data: 29%
+Saving world data: 51%
+Saving world data: 66%
+# ... 1 more identical progress ticks elided ...
+Validating world save: 31%
+Backing up world file

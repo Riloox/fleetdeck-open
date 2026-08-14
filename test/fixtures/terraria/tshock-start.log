@@ -1,0 +1,31 @@
+# variant=tshock version=TShock 6.1.0.0 for Terraria 1.4.5.6 host=linux-x64 (Debian 13) captured=2026-07-25 source=github.com/Pryaxis/TShock
+Error Logging Enabled.
+[OTAPI] Starting up (PC Server,3.3.11+c532c59,ModFw:1.1.15+a2c0c70).
+TerrariaAPI Version: 2.1.0.0 (Protocol v1.4.5.6 (319), OTAPI 3.3.11+c532c59)
+Using ConstileationProvider for tile implementation
+TShock 6.1.0.0 (Profoundly Collaborative (3.11)) now running.
+AutoSave Enabled
+Backups Enabled
+Welcome to TShock for Terraria!
+TShock comes with no warranty & is free software.
+You can modify & distribute it under the terms of the GNU GPLv3.
+[Server API] Info Plugin TShock v6.1.0.0 (by The TShock Team) initiated.
+Terraria Server v1.4.5.6
+
+Resetting game objects
+Loading world data:
+Settling liquids
+Terraria Server v1.4.5.6
+
+Listening on port 7777
+Type 'help' for a list of commands.
+
+: Login before join enabled. Users may be prompted for an account specific password instead of a server password on connect.
+Login using UUID enabled. Users automatically login via UUID.
+A malicious server can easily steal a user's UUID. You may consider turning this option off if you run a public server.
+To setup the server, join the game and type /setup [REDACTED_TOKEN]
+This token will display until disabled by verification. (/setup)
+Server started
+> playing
+Server executed: /playing.
+There are currently no players online.

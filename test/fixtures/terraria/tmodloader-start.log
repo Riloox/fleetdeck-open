@@ -1,0 +1,59 @@
+# variant=tmodloader version=tModLoader 2026.5.3.0 for Terraria 1.4.4.9 host=linux-x64 (Debian 13) captured=2026-07-25 source=github.com/tModLoader/tModLoader
+Finding Mods...
+Constructing Mods...
+Adding Content: tModLoader v2026.5.3.0
+Resizing...
+Configuring Content: tModLoader v2026.5.3.0
+Finalizing Content: tModLoader v2026.5.3.0
+Adding Recipes...
+Terraria Server v1.4.4.9 - tModLoader v2026.5.3.0
+
+1		Fleetdeck Test
+n		New World
+d <number>	Delete World
+m		Mods List
+
+Choose World: 
+> 1
+Terraria Server v1.4.4.9 - tModLoader v2026.5.3.0
+
+Max players (press enter for 16): 
+> 8
+Terraria Server v1.4.4.9 - tModLoader v2026.5.3.0
+
+Server port (press enter for 7777): 
+> 7777
+Terraria Server v1.4.4.9 - tModLoader v2026.5.3.0
+
+Automatically forward port? (y/n): 
+> n
+Terraria Server v1.4.4.9 - tModLoader v2026.5.3.0
+
+Server password (press enter for none): 
+> 
+Terraria Server v1.4.4.9
+
+Loading world data: 1%
+Loading world data: 2%
+Loading world data: 3%
+# ... 97 more identical progress ticks elided ...
+Settling liquids 1%
+Settling liquids 2%
+Settling liquids 3%
+# ... 47 more identical progress ticks elided ...
+Running engine preload...
+Terraria Server v1.4.4.9
+
+Listening on port 7777
+Type 'help' for a list of commands.
+
+Server started
+> playing
+: No players connected.
+> save
+: Saving world data: 24%
+Saving world data: 56%
+Saving world data: 87%
+Validating world save: 2%
+Backing up world file
+Saving modded world data

@@ -1,0 +1,226 @@
+/* Hallmark · genre: atmospheric · macrostructure: Workbench · theme: Midnight · enrichment: official game artwork · nav: N4 command-first · footer: none
+ * Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · contrast: pass (40–41) · slop: pass (42–45)
+ * honest: pass (46) · chrome: pass (47) · tokens: pass (48) · responsive: pass (49) · icons: pass (30) · mobile: pass (34, 49, 50–57)
+ */
+/* ---------------------------------------------------------------------------
+   PRIMITIVES
+
+   This file owns raw values. `src/index.css` owns semantic roles and aliases
+   what is here. A custom property name must never be declared in both files:
+   this file is unlayered and `src/index.css`'s `:root` sits inside
+   `@layer base`, and unlayered always beats a layer regardless of source
+   order - so any overlap silently resolves here, wherever it was intended to.
+
+   Colours are stored as bare `L% C H` triplets rather than full `oklch()`
+   functions so Tailwind can add an alpha channel:
+   `oklch(var(--ember-5) / <alpha-value>)`.
+   --------------------------------------------------------------------------- */
+:root {
+  /* Ember heat ramp --------------------------------------------------------
+     One coal bed read as a temperature scale - dead ash at the bottom,
+     white-hot at the top. Every accent, chart series and log level in the app
+     lands on a rung of this, which is what makes the palette one system rather
+     than a set of swatches.
+
+     Adjacent steps are 8-11% apart in lightness, so the ramp still separates
+     when hue is unavailable: greyscale, low-quality panels, colour blindness.
+     All seven are verified inside sRGB - --ember-6 and --ember-7 sit at the
+     gamut ceiling for their lightness (max chroma 0.140 and 0.084) and cannot
+     take more saturation without being clipped by the browser. */
+  --ember-1: 30% 0.055 32;      /* ash - spent coal, deepest tint */
+  --ember-2: 45% 0.130 30;      /* coal red - gradient base, chart floor */
+  --ember-3: 56% 0.165 36;      /* red-orange */
+  --ember-4: 66% 0.185 46;      /* ember orange - hover / pressed partner */
+  --ember-5: 74% 0.170 55;      /* SIGNAL - the one voice */
+  --ember-6: 82% 0.135 68;      /* hot amber */
+  --ember-7: 93% 0.062 88;      /* white-hot - focus, commands */
+
+  /* Coal neutrals ----------------------------------------------------------
+     The desk itself. Hue 40 (red-brown) rather than the old 55 (yellow-brown):
+     it reads as actual coal, and it opens a 15-degree gap to the accent so
+     amber still separates from the surface it sits on.
+
+     Chroma is roughly double what it was. Below about 0.018 the warmth is
+     under the perceptual threshold on a dark screen - the old --background
+     rendered #090604, a red-to-blue spread of 5/255, which is why the app read
+     as "grey panel with an orange button" no matter what the tokens claimed.
+
+     --coal-4 is deliberately held at 0.020 and not pushed further: the
+     translucent status washes (`bg-status-online/15` and friends) composite
+     over it, and against a card at 0.030 the green wash collapses to 39 degrees
+     of hue separation and reads olive. At 0.020 it holds 83. */
+  --coal-1: 8.5% 0.014 40;      /* console bed - darkest surface in the app */
+  --coal-2: 10% 0.016 40;       /* sidebar rail */
+  --coal-3: 12.5% 0.018 40;     /* background */
+  --coal-4: 16.5% 0.020 40;     /* card */
+  --coal-5: 21% 0.024 40;       /* popover, secondary */
+  --coal-6: 25% 0.028 42;       /* accent surface, muted */
+  --coal-7: 30% 0.032 42;       /* border, input */
+  --coal-8: 39% 0.034 42;       /* strong rule */
+
+  /* Ink. Warm enough to belong to the room, neutral enough to read as text. */
+  --ink-1: 95% 0.014 70;        /* primary text */
+  --ink-2: 80% 0.016 65;        /* secondary text, rail labels */
+  --ink-3: 69% 0.018 60;        /* captions, placeholders */
+  --ink-4: 50% 0.018 50;        /* disabled */
+  /* Text and icons that sit ON an ember fill. The accent is a light colour, so
+     its foreground is near-black, not white - 8.3:1 against --ember-5. */
+  --ink-on-ember: 13% 0.020 40;
+
+  /* Functional signals -----------------------------------------------------
+     Deliberately NOT on the ember ramp. This is an operations panel: a server's
+     state has to be readable at a glance, and lightness-only separation is not
+     enough for that. Green and red keep their own hues; warn is pulled to a
+     true yellow (92) so it sits 37 degrees off the accent instead of the 26 it
+     used to, because "transitioning" must never read as "primary action".
+
+     --signal-error is at 66% lightness, not the 62% it was: full-alpha error
+     text over its own /15 wash measured 4.15:1 at the old value, under AA. */
+  --signal-online: 76% 0.155 148;
+  --signal-warn: 85% 0.150 92;
+  --signal-error: 66% 0.190 22;
+  --signal-idle: 56% 0.016 45;  /* offline - warm dead ash, not grey */
+
+  /* Type -------------------------------------------------------------------
+     One superfamily at two widths: Saira Condensed 800 for display, Saira at
+     its regular width for body. This is the standard esports/gaming brand
+     backbone - a heavy condensed cut for titles and scoreboards, the normal
+     width for stats and reading text - and it is a superfamily on purpose.
+
+     Two earlier attempts clashed. Grenze Gotisch (blackletter) lost legibility
+     at the small uppercase sizes this app actually sets display type. Archivo
+     read well but sat against a Grenze serif body, and an industrial grotesk
+     next to a calligraphic serif reads as two unrelated systems rather than a
+     pairing - most visibly in the header, where the server selector sits
+     directly beside the view title. Sharing one skeleton removes that failure
+     mode structurally: the two cuts cannot disagree about how an 'a' is built.
+
+     Hierarchy comes from four axes at once - uppercase vs sentence case, 800 vs
+     400, condensed vs regular width, and size - which is more separation than
+     the old two-family pairing had, without the discord.
+
+     Saira is squarish and technical, so it holds the brutalist register and
+     reads as game-adjacent without becoming a costume: the headline-only
+     sci-fi faces (Orbitron, Audiowide, Russo One) collapse at the 12-16px
+     uppercase this interface is mostly made of. x-height is 0.510, well above
+     Grenze's 0.448.
+
+     Mono is confined to code surfaces - see --font-outlier below. */
+  --font-display: 'Saira Condensed', 'Saira', 'Helvetica Neue', sans-serif;
+  --font-body: 'Saira', 'Helvetica Neue', 'Arial', sans-serif;
+
+  /* The wordmark uses the regular-width body family at a strong weight. Its
+     open proportions balance the square glyph and remain clear at sidebar
+     scale without introducing a decorative or overly condensed face. */
+  --font-brand: 'Saira', 'Helvetica Neue', 'Arial', sans-serif;
+  --text-brand: 1rem;
+  --tracking-brand: 0.04em;
+
+  /* Machine text. IBM Plex Mono replaces JetBrains Mono: it is humanist rather
+     than geometric, so it sits under the Saira body without the two faces
+     arguing, and it is a third the weight on disk (38KB vs 112KB per cut).
+
+     The token's reach is deliberately narrow now. It dresses only surfaces that
+     are genuinely code or streaming machine output - the console, the diff
+     pane, the raw config and file editors - where column alignment is what you
+     are actually reading. Inline metadata (versions, IDs, paths, byte counts)
+     no longer uses it: monospace there was a costume for "technical", and it
+     cost legibility at 10-11px for nothing. Those sites use the body face with
+     `tabular-nums`, which is what actually made the columns line up. */
+  --font-outlier: 'IBM Plex Mono', 'SFMono-Regular', 'Consolas', monospace;
+
+  --display-weight: 800;
+  --display-style: normal;
+  /* Positive now. A condensed face is already narrow, and uppercase condensed
+     at 800 closes its counters if tracked at all tight - the opposite of what
+     Grenze Gotisch's -0.035em wanted. Small uppercase titles take more still
+     (0.03em); this is the value for large display. */
+  --tracking-display: 0.01em;
+  --tracking-label: 0.12em;
+
+  /* Role scale. Raised roughly one step across the board - the previous scale
+     bottomed out at 10-11px for every uppercase label in the app, which is
+     below the comfortable floor for tracked small caps on a dark surface.
+     --text-label (12px) is now the hard floor for instrument labelling. */
+  --text-label: 0.75rem;      /* 12px - eyebrows, table headers, chips, pills */
+  --text-xs: 0.75rem;         /* 12px */
+  --text-sm: 0.8125rem;       /* 13px */
+  --text-base: 0.875rem;      /* 14px - body */
+  --text-md: 0.9375rem;       /* 15px */
+  --text-title: 1rem;         /* 16px - card and panel titles */
+  --text-lg: 1.0625rem;       /* 17px */
+  --text-xl: 1.3125rem;       /* 21px */
+  --text-2xl: 2rem;           /* 32px - view headlines */
+  --text-3xl: 2.375rem;       /* 38px */
+  --text-display: clamp(2.75rem, 4.5vw + 1rem, 5.25rem);
+
+  --space-3xs: 0.25rem;
+  --space-2xs: 0.5rem;
+  --space-xs: 0.75rem;
+  --space-sm: 1rem;
+  --space-md: 1.25rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+  --space-3xl: 4.5rem;
+  --space-4xl: 6rem;
+
+  --rule-hair: 1px;
+  --rule-fine: 2px;
+  --radius-card: 0.25rem;
+  --radius-input: 0.1875rem;
+  --radius-pill: 999px;
+
+  /* Elevation --------------------------------------------------------------
+     Five real steps. This replaces the single 1px seat-line that every
+     --shadow-* alias used to collapse onto, which meant the app had no
+     elevation vocabulary at all - a dialog and a list row cast the same
+     shadow.
+
+     The ambient is a warm near-black (hue 40) rather than neutral or pure
+     black, so a raised surface darkens the coal underneath it instead of
+     greying it. Every step carries both a tight contact shadow and a wider
+     soft one; a blurred shadow with no offset is a halo, not depth. */
+  --shadow-xs: 0 1px 2px -1px oklch(4% 0.010 40 / 0.55);
+  --shadow-sm:
+    0 1px 2px -1px oklch(4% 0.010 40 / 0.50),
+    0 2px 6px -2px oklch(4% 0.010 40 / 0.42);
+  --shadow-md:
+    0 2px 4px -2px oklch(4% 0.010 40 / 0.52),
+    0 6px 14px -4px oklch(4% 0.010 40 / 0.44);
+  --shadow-lg:
+    0 4px 8px -3px oklch(3.5% 0.012 40 / 0.56),
+    0 14px 30px -8px oklch(3.5% 0.012 40 / 0.48);
+  --shadow-xl:
+    0 8px 16px -6px oklch(3% 0.012 40 / 0.62),
+    0 28px 56px -14px oklch(3% 0.012 40 / 0.52);
+  --shadow-card: var(--shadow-sm);
+
+  /* Ember bloom ------------------------------------------------------------
+     Heat, spent only on things that are genuinely live: the primary action,
+     focus, and a server that is actually up. Offset-free on purpose - this one
+     IS a halo, because it is light being emitted rather than an object casting
+     a shadow, and it is always paired with a real --shadow-* underneath. */
+  --bloom-sm: 0 0 10px -1px oklch(var(--ember-4) / 0.38);
+  --bloom-md:
+    0 0 14px -2px oklch(var(--ember-5) / 0.42),
+    0 4px 22px -6px oklch(var(--ember-3) / 0.34);
+  --bloom-lg:
+    0 0 20px -2px oklch(var(--ember-5) / 0.46),
+    0 6px 34px -8px oklch(var(--ember-3) / 0.40);
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-micro: 120ms;
+  --dur-short: 220ms;
+  --dur-long: 420ms;
+
+  --z-base: 1;
+  --z-raised: 10;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-modal: 400;
+  --z-toast: 500;
+  --z-tooltip: 600;
+}

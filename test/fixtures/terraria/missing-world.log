@@ -1,0 +1,16 @@
+# variant=vanilla version=1.4.5.6 host=linux-x64 (Debian 13) captured=2026-07-25 source=terraria.org dedicated server, world= points at a file that does not exist
+Error Logging Enabled.
+
+Terraria Server v1.4.5.6
+
+Load failed!  No backup found.
+
+System.IO.FileNotFoundException: Could not find file "<fixture-root>/worlds/Does_Not_Exist.wld"
+File name: '<fixture-root>/worlds/Does_Not_Exist.wld'
+ at System.IO.FileStream..ctor (System.String path, System.IO.FileMode mode, System.IO.FileAccess access, System.IO.FileShare share, System.Int32 bufferSize, System.Boolean anonymous, System.IO.FileOptions options) [0x0019e] in <d1664be62cd44600bbd25f7afa292479>:0 
+ at System.IO.FileStream..ctor (System.String path, System.IO.FileMode mode, System.IO.FileAccess access, System.IO.FileShare share, System.Int32 bufferSize) [0x00000] in <d1664be62cd44600bbd25f7afa292479>:0 
+ at (wrapper remoting-invoke-with-check) System.IO.FileStream..ctor(string,System.IO.FileMode,System.IO.FileAccess,System.IO.FileShare,int)
+ at System.IO.File.ReadAllBytes (System.String path) [0x00000] in <d1664be62cd44600bbd25f7afa292479>:0 
+ at Terraria.Utilities.FileUtilities.ReadAllBytes (System.String path, System.Boolean cloud) [0x00016] in <6eda79bf4fab4ffcbefb3825a0b3bf71>:0 
+ at Terraria.IO.WorldFile.LoadWorld () [0x001d8] in <6eda79bf4fab4ffcbefb3825a0b3bf71>:0 
+# process exited: code=0 signal=null

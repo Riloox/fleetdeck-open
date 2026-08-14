@@ -1,0 +1,64 @@
+name: Install E2E (real downloads)
+
+on:
+  workflow_dispatch:
+    inputs:
+      games:
+        type: string
+        default: 'minecraft,terraria'
+        description: 'valid values minecraft,terraria,palworld,all'
+
+  schedule:
+    # nightly 06:00 America/Montevideo in winter (UTC)
+    - cron: '0 9 * * *'
+
+  push:
+    tags:
+      - 'v*'
+
+concurrency:
+  group: install-e2e
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  install:
+    name: install e2e (real downloads)
+    runs-on: windows-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium
+
+      - name: Run install specs
+        env:
+          E2E_INSTALL: ${{ inputs.games || 'minecraft,terraria' }}
+        run: npm run test:e2e:install
+
+      - name: Upload report
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: install-e2e-report
+          path: |
+            e2e/report/
+            e2e/results/
+          retention-days: 14
