@@ -525,10 +525,11 @@ test.describe('folder picker', () => {
     const inputBox = await parent.boundingBox();
     const browseBox = await browse.boundingBox();
 
-    // Same height (±1px for sub-pixel rounding) and the same top edge: the
-    // button fills the input's band instead of hanging 8px short of it.
+    // Same height (±1px) and effectively the same top edge. Chromium can
+    // report fractional flex-row offsets on Windows, so allow up to 2px for
+    // the top edge while still rejecting the old 8px misalignment.
     expect(Math.abs(inputBox.height - browseBox.height)).toBeLessThanOrEqual(1);
-    expect(Math.abs(inputBox.y - browseBox.y)).toBeLessThanOrEqual(1);
+    expect(Math.abs(inputBox.y - browseBox.y)).toBeLessThanOrEqual(2);
   });
 });
 
