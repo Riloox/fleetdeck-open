@@ -1,0 +1,20 @@
+# gitleaks allowlist (v8). Loaded automatically from the repo root by
+# `gitleaks detect` (CI + local). Regexes match the full file path.
+#
+# These are NOT real secrets:
+#  - test/*.cjs: generated JWT/API-key fixtures used by the audit and
+#    redaction test suites (fleetdeck writes fake tokens at test time).
+#  - resources/installers/steamcmd/: vendored third-party SiteServerUI
+#    assets; the generic-api-key hits are the vendor's own JS literals.
+# If a real secret ever appears, it must NOT be added here - fix the leak.
+
+title = "fleetdeck gitleaks config"
+
+[allowlist]
+description = "Test fixtures and vendored third-party steamcmd UI"
+paths = [
+  '''test/foundation-audit\.test\.cjs''',
+  '''test/foundation-redact-archive\.test\.cjs''',
+  '''test/server-templates\.test\.cjs''',
+  '''resources/installers/steamcmd/''',
+]

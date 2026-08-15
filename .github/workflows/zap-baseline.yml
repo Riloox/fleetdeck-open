@@ -1,0 +1,64 @@
+name: DAST baseline (ZAP)
+
+on:
+  schedule:
+    - cron: '23 5 * * 1'
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: URL of a running disposable instance
+        required: false
+        default: http://127.0.0.1:2121
+      start_command:
+        description: Command that boots the app to scan
+        required: false
+        default: node server.js
+
+permissions:
+  contents: read
+
+jobs:
+  zap-baseline:
+    name: ZAP baseline scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Set up Node 22
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Prepare the app
+        run: npm run build
+      - name: Boot the app
+        run: |
+          ${{ inputs.start_command || 'node server.js' }} &
+          for i in $(seq 1 45); do
+            if curl -sf "${{ inputs.target_url || 'http://127.0.0.1:2121' }}" > /dev/null 2>&1; then
+              echo "app is up"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "app did not come up within 90s" >&2
+          exit 1
+      - name: ZAP baseline scan (passive)
+        run: >-
+          docker run --network host
+          -v "${{ github.workspace }}/zap-out:/zap/wrk"
+          ghcr.io/zaproxy/zaproxy:stable
+          zap-baseline.py -t "${{ inputs.target_url || 'http://127.0.0.1:2121' }}"
+          -r /zap/wrk/zap-report.html
+        # Informational by default (baseline exits 0 even with alerts). Gate
+        # the scheduled run with `-m 1` or `--fail-on-warnings` if you want
+        # the scan itself to fail.
+      - name: Upload ZAP report
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: zap-report
+          path: zap-out/

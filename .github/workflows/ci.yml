@@ -35,11 +35,7 @@ jobs:
         run: npm ci
 
       - name: Audit production dependencies
-        run: npm audit --omit=dev
-        # Non-blocking — known advisory (1 high) routes through
-        # node-cron 3.x → uuid (GHSA-w5hq-g745-h8pq); fix is a
-        # breaking node-cron@4 upgrade tracked separately.
-        continue-on-error: true
+        run: npm audit --omit=dev --audit-level=high
 
       - name: Backend and module tests
         run: npm test
@@ -85,11 +81,7 @@ jobs:
         run: npm ci
 
       - name: Audit production dependencies
-        run: npm audit --omit=dev
-        # Non-blocking — known advisory (1 high) routes through
-        # node-cron 3.x → uuid (GHSA-w5hq-g745-h8pq); fix is a
-        # breaking node-cron@4 upgrade tracked separately.
-        continue-on-error: true
+        run: npm audit --omit=dev --audit-level=high
 
       - name: Backend and module tests
         run: npm test
