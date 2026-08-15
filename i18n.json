@@ -1349,6 +1349,22 @@
         "confirmRestore": "Stage and restore",
         "restoreQueued": "Restore queued ({id})"
       },
+      "bugReport": {
+        "launcher": "Report a bug",
+        "title": "Report a bug",
+        "summary": "Summary",
+        "description": "Description",
+        "repro": "Steps to reproduce",
+        "expected": "Expected behaviour",
+        "context": "Current screen",
+        "privacy": "Your report is sent to the Fleetdeck public issue tracker. It includes your username, the current game, screen and panel version - but never your passwords, access tokens, server paths or email.",
+        "submit": "Submit report",
+        "success": "Report submitted - thank you!",
+        "pending": "GitHub is unreachable right now. Your report is saved locally and will be retried automatically.",
+        "notConfigured": "GitHub issue sync is not configured. Your report is saved locally and will sync after an administrator enables it.",
+        "hide": "Hide report button",
+        "show": "Show report button"
+      },
       "tasks": {
         "title": "Scheduled tasks",
         "hint": "Run an action on a schedule, or when a condition happens: a player joins, the server empties, or an update lands. Times use the panel machine’s local time.",
@@ -4099,6 +4115,22 @@
         "rollbackAvailable": "La reversión estará disponible después de confirmar.",
         "confirmRestore": "Preparar y restaurar",
         "restoreQueued": "Restauración en cola ({id})"
+      },
+      "bugReport": {
+        "launcher": "Informar de un error",
+        "title": "Informar de un error",
+        "summary": "Resumen",
+        "description": "Descripción",
+        "repro": "Pasos para reproducir",
+        "expected": "Comportamiento esperado",
+        "context": "Pantalla actual",
+        "privacy": "Tu informe se envía al rastreador público de incidencias de Fleetdeck. Incluye tu nombre de usuario, el juego, la pantalla y la versión del panel, pero nunca tus contraseñas, tokens de acceso, rutas del servidor ni correo electrónico.",
+        "submit": "Enviar informe",
+        "success": "Informe enviado: ¡gracias!",
+        "pending": "GitHub no está disponible ahora mismo. Tu informe está guardado localmente y se reintentará automáticamente.",
+        "notConfigured": "La sincronización con GitHub no está configurada. Tu informe se guarda localmente y se sincronizará cuando un administrador la active.",
+        "hide": "Ocultar el botón de informe",
+        "show": "Mostrar el botón de informe"
       },
       "tasks": {
         "title": "Tareas programadas",

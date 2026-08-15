@@ -1,0 +1,19 @@
+{
+  "name": "fleetdeck-relay",
+  "version": "0.1.0",
+  "description": "Standalone upstream bug-report relay core for Fleetdeck: strict validation/redaction, durable SQLite queue, idempotent GitHub sync worker.",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.11.1",
+    "express": "^4.21.2"
+  },
+  "scripts": {
+    "check": "node --check server.cjs && node --check lib/validate-report.cjs && node --check lib/redact-report.cjs && node --check lib/store.cjs && node --check lib/queue-worker.cjs && node --check lib/github-client.cjs && node --check lib/rate-limit.cjs",
+    "test": "node ../test/bug-report-relay-contract.test.cjs && node ../test/bug-report-relay-validation.test.cjs && node ../test/bug-report-relay-queue.test.cjs && node ../test/bug-report-relay-server.test.cjs"
+  }
+}

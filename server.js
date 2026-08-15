@@ -181,6 +181,9 @@ function procUsage(pid) {
 const cron = require('node-cron');
 const jwt = require('jsonwebtoken');
 const i18n = require('./i18n.cjs');
+// Panel version, stamped on every bug report so support can map an issue to a
+// release without asking the reporter.
+const PANEL_VERSION = require('./package.json').version;
 
 // ---------------------------------------------------------------------------
 // Config
@@ -251,7 +254,7 @@ const RUNTIMES_DIR = process.env.FLEETDECK_RUNTIMES_DIR
   : path.join(__dirname, 'runtimes');
 function loadRunState() {
   try { return JSON.parse(fs.readFileSync(RUNSTATE_PATH, 'utf8')) || {}; }
-  catch (_) { return {}; }
+  catch { return {}; }
 }
 function setRunRecord(id, rec) {
   const s = loadRunState();
@@ -542,6 +545,21 @@ function migrateConfig() {
   }
   if (config.geoLanguageDetection === undefined) { config.geoLanguageDetection = false; changed = true; }
   
+  // Bug-report GitHub integration defaults: disabled until an administrator
+  // configures it, destination Riloox/fleetdeck-open. The token is never stored
+  // in the block - it comes from FLEETDECK_GITHUB_TOKEN (see the bug-report
+  // wiring section further down). Prefer the config module's DEFAULTS when it
+  // has landed; fall back to the documented literals so a partially-deployed
+  // tree still boots.
+  if (!config.bugReports || typeof config.bugReports !== 'object' || Array.isArray(config.bugReports)) {
+    let bugReportDefaults = { enabled: false, owner: 'Riloox', repo: 'fleetdeck-open', labels: ['bug'] };
+    try {
+      const bugReportConfig = require('./lib/bug-report-config.cjs');
+      if (bugReportConfig && bugReportConfig.DEFAULTS) bugReportDefaults = bugReportConfig.DEFAULTS;
+    } catch (_) { /* config module not landed yet; literals above match its DEFAULTS */ }
+    config.bugReports = bugReportDefaults;
+    changed = true;
+  }
   if (changed) saveConfig(config);
 }
 
@@ -1630,7 +1648,7 @@ app.post('/api/login', async (req, res) => {
   user.language = chosen;
 
   try { foundationAudit.record({ actorId: user.id, actorUsername: user.username, action: 'auth.login', targetType: 'session', outcome: 'success' }); }
-  catch (err) { return res.status(503).json({ error: 'Could not record security event' }); }
+  catch { return res.status(503).json({ error: 'Could not record security event' }); }
 
   res.json({ token: signToken(user), user: { ...publicUser(user), permissions: publicPermissions(user) } });
 });
@@ -3062,11 +3080,264 @@ app.post('/api/palworld/:action', (req, res) => {
   return res.status(400).json({ error: tErr(req.user, 'errors.unknownAction') });
 });
 
+// ---------------------------------------------------------------------------
+// Bug-report sync integration (plan Task 3/4 wiring + upstream-relay Task 5)
+//
+// Three surfaces share the config block `config.bugReports`:
+//   1. POST /api/bug-reports persists a report, then attempts an immediate
+//      one-shot sync (syncBugReportNow). A GitHub/relay failure never fails
+//      the request: the row stays pending/retryable and the scheduler retries.
+//   2. A bounded cron retry (createSyncWorker for github mode,
+//      runRelayBugReportSyncOnce for upstream-relay mode) drains
+//      pending/failed rows under an attempt/backoff policy.
+//   3. PUT /api/config/bug-reports (admin) updates non-secret settings; the
+//      token is environment-driven (FLEETDECK_GITHUB_TOKEN) and the relayUrl
+//      is server config only (config.json) — neither is ever stored in
+//      config.json from the browser nor returned to it.
+//
+// The core modules (lib/bug-reports.cjs, lib/bug-report-config.cjs,
+// lib/github-issues.cjs, lib/bug-report-sync.cjs) land in the same feature
+// wave. They are loaded lazily so a partially-deployed tree still boots and
+// the rest of the panel keeps working; once they exist the integration is
+// fully active.
+// ---------------------------------------------------------------------------
+let _bugReportsStore = null;
+let _bugReportConfig = null;
+let _githubIssues = null;
+let bugReportsWorker = null;
+
+function loadBugReportCore() {
+  if (_bugReportsStore && _bugReportConfig && _githubIssues) return true;
+  try {
+    _bugReportsStore = require('./lib/bug-reports.cjs');
+    _bugReportConfig = require('./lib/bug-report-config.cjs');
+    _githubIssues = require('./lib/github-issues.cjs');
+    return true;
+  } catch (err) {
+    if (!err || err.code !== 'MODULE_NOT_FOUND') log('bug-report core load failed:', (err && err.message) || err);
+    _bugReportsStore = null; _bugReportConfig = null; _githubIssues = null;
+    return false;
+  }
+}
+
+function bugReportConfigBlock() {
+  if (!loadBugReportCore()) return { enabled: false, owner: 'Riloox', repo: 'fleetdeck-open', labels: ['bug'], mode: 'github', relayUrl: null, token: null, errors: [] };
+  try { return _bugReportConfig.normalizeConfig(config.bugReports || {}, process.env); }
+  catch {
+}
+
+// One-shot sync for the POST route: create the GitHub issue (github mode) or
+// POST a redacted payload to the upstream relay (upstream-relay mode), record
+// the outcome on the durable row, and return the sync summary the router
+// echoes. Never throws; never leaks a token (errors are redacted by the
+// clients and again by the router before they reach a response).
+async function syncBugReportNow(report) {
+  if (!loadBugReportCore() || !report) {
+    return { state: 'pending', issueNumber: null, issueUrl: null, error: 'sync_unavailable: bug-report modules not loaded' };
+  }
+  const cfg = bugReportConfigBlock();
+  if (!cfg.enabled) {
+    // Not configured: the report stays pending locally. This is different
+    // from an outage, so the UI must not claim the relay/GitHub is down.
+    return {
+      state: 'pending',
+      issueNumber: null,
+      issueUrl: null,
+      reason: 'not_configured',
+      message: 'Bug-report sync is not configured. The report is saved locally and will sync after an administrator enables it.',
+      error: 'sync_disabled: bug-report integration is not configured',
+    };
+  }
+  if (cfg.mode === 'upstream-relay') {
+    // Relay failures never fail the request: the row stays pending/retryable
+    // and the scheduler re-posts with the same idempotency key.
+    return _bugReportConfig.syncReportToRelay(report, {
+      relayUrl: cfg.relayUrl,
+      timeoutMs: _bugReportConfig.RELAY_TIMEOUT_MS,
+      markSynced: (id, meta) => _bugReportsStore.markSynced(id, meta),
+      markFailed: (id, meta) => _bugReportsStore.markFailed(id, meta),
+    });
+  }
+  if (!cfg.token) {
+    // Tokenless github mode: the report stays pending locally. This is
+    // different from an outage, so the UI must not claim that GitHub is down.
+    return {
+      state: 'pending',
+      issueNumber: null,
+      issueUrl: null,
+      reason: 'not_configured',
+      message: 'GitHub issue sync is not configured. The report is saved locally and will sync after an administrator enables it.',
+      error: 'sync_disabled: GitHub integration is not configured',
+    };
+  }
+  const client = _githubIssues.createGitHubClient({ token: cfg.token, owner: cfg.owner, repo: cfg.repo, labels: cfg.labels });
+  const marker = report.marker || `fleetdeck-${report.id}`;
+  try {
+    const body = _githubIssues.buildIssueBody({
+      summary: report.title || '',
+      description: report.description || '',
+      reproSteps: report.reproSteps || report.repro_steps || null,
+      expected: report.expected || null,
+      route: report.route || null,
+      view: report.view || null,
+      game: report.game || null,
+      actorUsername: report.actorUsername || report.actor_username || null,
+      actorId: report.actorId || report.actor_id || null,
+      timestamp: new Date(report.createdAt || report.created_at || Date.now()).toISOString(),
+      version: report.version || PANEL_VERSION,
+      userAgent: report.userAgent || report.user_agent || null,
+      marker,
+    });
+    const result = await client.createIssue({ title: report.title || 'Untitled report', body, marker });
+    _bugReportsStore.markSynced(report.id, { issueNumber: result.issueNumber, issueUrl: result.issueUrl });
+    return { state: 'synced', issueNumber: result.issueNumber, issueUrl: result.issueUrl, error: null };
+  } catch (err) {
+    const error = String((err && err.message) || err || 'sync failed');
+    const attempts = (report.attempts || 0) + 1;
+    try { _bugReportsStore.markFailed(report.id, { error, attempts }); } catch (_) { /* row stays pending */ }
+    return { state: 'failed', issueNumber: null, issueUrl: null, error };
+  }
+}
+
+// (Re)build the retry worker from the current config. Called at scheduler
+// setup and after every config save, so owner/repo/enabled/mode changes take
+// effect without a restart. The cron callback re-reads `bugReportsWorker` at
+// tick time, so replacing it here is picked up by the existing job.
+function rebuildBugReportWorker() {
+  bugReportsWorker = null;
+  if (!loadBugReportCore()) return;
+  const cfg = bugReportConfigBlock();
+  if (!cfg.enabled) return;
+  if (cfg.mode === 'upstream-relay') {
+    if (!cfg.relayUrl) return;
+    // Relay retries use the same durable store and backoff policy as the
+    // GitHub worker, but the client is the upstream relay: every POST carries
+    // the same clientKey so re-posts are idempotent at the relay.
+    bugReportsWorker = { runOnce: runRelayBugReportSyncOnce };
+    return;
+  }
+  if (!cfg.token) return;
+  try {
+    const { createSyncWorker } = require('./lib/bug-report-sync.cjs');
+    const client = _githubIssues.createGitHubClient({ token: cfg.token, owner: cfg.owner, repo: cfg.repo, labels: cfg.labels });
+    bugReportsWorker = createSyncWorker({
+      store: _bugReportsStore,
+      client,
+      logger: { warn: (m) => log('bug-report sync:', m) },
+    });
+  } catch (err) {
+    if (!err || err.code !== 'MODULE_NOT_FOUND') log('bug-report sync worker unavailable:', (err && err.message) || err);
+    bugReportsWorker = null;
+  }
+}
+
+/*
+ * Relay-mode retry pass for the scheduler. Mirrors the GitHub worker's
+ * contract (never rejects; bounded by the store's attempt/backoff policy) but
+ * interprets the relay's 201/202/error responses:
+ *   - issueUrl present            -> markSynced
+ *   - 202 queued (no url)         -> leave the row pending; the next tick
+ *                                    re-posts with the same clientKey until
+ *                                    the relay's queue worker creates the
+ *                                    issue (rate limits make re-posts bounded)
+ *   - any other status / network  -> markFailed attempts+1 (retryable)
+ * A module-level busy flag prevents overlapping passes.
+ */
+let relaySyncBusy = false;
+async function runRelayBugReportSyncOnce() {
+  const counts = { attempted: 0, succeeded: 0, failed: 0, skipped: 0 };
+  if (relaySyncBusy) return counts;
+  relaySyncBusy = true;
+  try {
+    const cfg = bugReportConfigBlock();
+    if (!cfg.enabled || cfg.mode !== 'upstream-relay' || !cfg.relayUrl) return counts;
+    let rows;
+    try {
+      rows = _bugReportsStore.listPending({
+        now: Date.now(),
+        maxAttempts: 5,
+        backoffBaseMs: 60_000,
+        maxAgeMs: 30 * 86_400_000,
+        limit: 10,
+      });
+    } catch (err) {
+      log('bug-report sync: listPending failed:', (err && err.message) || err);
+      return counts;
+    }
+    for (const report of rows) {
+      counts.attempted += 1;
+      // syncReportToRelay never throws and records the outcome on the row.
+      const summary = await _bugReportConfig.syncReportToRelay(report, {
+        relayUrl: cfg.relayUrl,
+        timeoutMs: _bugReportConfig.RELAY_TIMEOUT_MS,
+        markSynced: (id, meta) => _bugReportsStore.markSynced(id, meta),
+        markFailed: (id, meta) => _bugReportsStore.markFailed(id, meta),
+      });
+      if (summary.state === 'synced') counts.succeeded += 1;
+      else if (summary.state === 'failed') counts.failed += 1;
+      // 'pending' (202 queued) counts as attempted only: the row stays
+      // eligible so the next tick keeps polling the relay.
+    }
+    return counts;
+  } finally {
+    relaySyncBusy = false;
+  }
+}
+
 // Platform foundation: /api/operations is the durable-operations surface
 // defined in docs/roadmap/README.md. Mount it after the auth middleware
 // so its handlers can read req.user.
 app.use('/api/operations', operationsRouter());
 app.use('/api/audit', auditRouter());
+// Bug reports: mounted at /api WITHOUT active-server scoping. Reports belong
+// to the panel and the reporter, never to a selected game server, so no
+// X-Fleetdeck-Server-Id handling and no per-server capability gate applies.
+// Auth is enforced by the /api middleware above; the router re-checks req.user
+// so it stays safe if ever mounted elsewhere. The router itself is always
+// available; its injected store/sync degrade gracefully while the core
+// modules are not yet deployed.
+app.use('/api', require('./lib/routes/bug-reports.cjs')({
+  bugReports: {
+    create: (input, opts) => {
+      if (!loadBugReportCore()) throw new Error('bug report storage unavailable (modules not loaded)');
+      return _bugReportsStore.create(input, opts);
+    },
+    get: (id) => (loadBugReportCore() ? _bugReportsStore.get(id) : undefined),
+  },
+  syncReport: syncBugReportNow,
+  audit: foundationAudit,
+  getConfig: () => config.bugReports || {},
+  normalizeConfig: (input, env) => {
+    if (!loadBugReportCore()) return { enabled: false, owner: 'Riloox', repo: 'fleetdeck-open', labels: ['bug'], mode: 'github', relayUrl: null, token: null, errors: ['sync_unavailable'] };
+    return _bugReportConfig.normalizeConfig(input, env);
+  },
+  redactConfig: (cfg) => {
+    if (!loadBugReportCore()) { const c = Object.assign({}, cfg); delete c.token; return c; }
+    return _bugReportConfig.redactConfig(cfg);
+  },
+  saveConfig: (next) => {
+    // Persist the block without any token key: rotation is environment-driven
+    // and config files are commonly backed up. The token, when present, lives
+    // in the process environment only.
+    const block = Object.assign({}, next);
+    delete block.token;
+    delete block[_bugReportConfig ? _bugReportConfig.GITHUB_TOKEN_ENV : 'FLEETDECK_GITHUB_TOKEN'];
+    // relayUrl is server config only (config.json): a browser PUT can never
+    // introduce or change it. Always keep the value already loaded from the
+    // config file and drop anything the browser tried to supply.
+    const current = config.bugReports && typeof config.bugReports === 'object' ? config.bugReports : {};
+    if (typeof current.relayUrl === 'string' && current.relayUrl.trim() !== '') {
+      block.relayUrl = current.relayUrl;
+    } else {
+      delete block.relayUrl;
+    }
+    config.bugReports = block;
+    saveConfig(config);
+    rebuildBugReportWorker();
+  },
+  throttleLimits: { max: 5, windowMs: 60000 },
+  panelVersion: () => PANEL_VERSION,
+}));
 app.use('/api/health', healthRouter({
   resolveServerId: (req) => req.get('X-Fleetdeck-Server-Id') || (req.query && req.query.serverId) || (req.body && req.body.serverId) || config.activeServerId || null,
   knownServer: (id) => !!findServer(id),
@@ -3202,7 +3473,7 @@ function registerTemplateServer({ name, dir, manifest, runtime }) {
   config.servers.push(entry);
   if (!config.activeServerId) config.activeServerId = entry.id;
   try { saveConfig(config); getManager(entry.id); }
-  catch (err) { config.servers = config.servers.filter((item) => item.id !== entry.id); config.activeServerId = oldActive; try { saveConfig(config); } catch (_) {} throw err; }
+  catch { config.servers = config.servers.filter((item) => item.id !== entry.id); config.activeServerId = oldActive; try { saveConfig(config); } catch (_) {} throw err; }
   return serverWithStatus(entry);
 }
 
@@ -4494,7 +4765,7 @@ const worldSizeCache = {};   // { [serverId]: mb }
 
 (function loadMetrics() {
   try { metrics = JSON.parse(fs.readFileSync(METRICS_PATH, 'utf8')) || {}; }
-  catch (_) { metrics = {}; }
+  catch { metrics = {}; }
 })();
 
 function saveMetrics() {
@@ -7818,6 +8089,19 @@ function setupSchedulers() {
   }
   cronJobs.push(cron.schedule('* * * * *', () => {
     checkPalworldAutomaticUpdates().catch((error) => log(`Automatic Palworld updates failed: ${error.message}`));
+  }));
+
+  // Bug-report retry: drain pending/failed reports once a minute under the
+  // worker's attempt/backoff policy (GitHub mode: create issues; relay mode:
+  // re-post the idempotent payload to the upstream relay). The worker is
+  // (re)built from the current config, so enabling the integration or changing
+  // the destination takes effect without a restart; the callback guards the
+  // null case so a disabled integration is simply a no-op tick.
+  rebuildBugReportWorker();
+  cronJobs.push(cron.schedule('* * * * *', () => {
+    if (bugReportsWorker) {
+      bugReportsWorker.runOnce().catch((error) => log(`Bug-report sync failed: ${error.message}`));
+    }
   }));
 
   // Condition-based triggers (join, empty, update-available, interval) are

@@ -18,6 +18,7 @@ import { Page } from '@/components/layout/Page';
 import { FirstStartDialog } from '@/components/shared/FirstStartDialog';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { SettingsDialog } from '@/components/shared/SettingsDialog';
+import { BugReportButton } from '@/components/shared/BugReportButton';
 import { OnboardingTour } from '@/components/shared/OnboardingTour';
 import { DashboardView } from '@/views/DashboardView';
 import { ServersView } from '@/views/ServersView';
@@ -248,13 +249,13 @@ function writeTourVersion(v) {
 // Current build version injected by Vite's define (guarded for SSR/build contexts).
 function currentAppVersion() {
   try { return typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : ''; }
-  catch (_) { return ''; }
+  catch { return ''; }
 }
 
 function isDismissed(serverId) {
   if (!serverId) return false;
   try { return sessionStorage.getItem(dismissedKey(serverId)) === '1'; }
-  catch (_) { return false; }
+  catch { return false; }
 }
 
 function markDismissed(serverId) {
@@ -344,6 +345,7 @@ function AppShell({ onLoggedIn }) {
   const [tourOpen, setTourOpen] = useState(false);
   const [tourVariant, setTourVariant] = useState('full');
   const awaitingFirstStart = useRef(false);
+
 
   // Open only after entering a game, once for each user/game pair.
   // Existing users who already completed the full tour see a condensed
@@ -794,13 +796,23 @@ function AppShell({ onLoggedIn }) {
         confirmLabel={t('header.restart')}
         onConfirm={() => runServerAction('restart')}
       />
-      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} onStartTour={startTour} />
+      <SettingsDialog
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        onStartTour={startTour}
+      />
       {!showGames && (
         <ControlBar
           onServerSwitch={handleSetActive}
           onStart={() => serverAction('start')}
           onStop={() => serverAction('stop')}
           onRestart={() => serverAction('restart')}
+        />
+      )}
+      {!showGames && (
+        <BugReportButton
+          game={currentGame}
+          view={currentView}
         />
       )}
     </TooltipProvider>

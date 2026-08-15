@@ -14,6 +14,17 @@
     "palworld": "",
     "custom": ""
   },
+  "bugReports": {
+    "enabled": true,
+    "mode": "upstream-relay",
+    "owner": "Riloox",
+    "repo": "fleetdeck-open",
+    "labels": [
+      "bug",
+      "in-app-report"
+    ],
+    "relayUrl": "https://riloox.tail201e0c.ts.net/v1/reports"
+  },
   "serverDir": "",
   "jar": "",
   "javaArgs": [

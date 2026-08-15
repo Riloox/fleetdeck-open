@@ -89,3 +89,58 @@ build once, the service just keeps it running.
   watchdog** (admin only), and per server from that server's own settings
   when one is set. Servers without their own watchdog inherit the panel-wide
   value.
+
+## Bug reports (GitHub issues)
+
+The panel stores every in-app bug report locally first, then (when enabled)
+creates one GitHub issue per report. Reports are durable before any network
+call, so a GitHub outage never loses user feedback — the row stays `pending`
+and a once-a-minute scheduler retries it with backoff.
+
+### Enabling the integration
+
+1. Create a fine-grained PAT with **Issues: read and write** on the
+   destination repository.
+2. Export it for the panel process:
+
+   ```sh
+   export FLEETDECK_GITHUB_TOKEN=github_pat_...
+   ```
+
+   On a systemd service, add `Environment=FLEETDECK_GITHUB_TOKEN=...` to the
+   unit (or use an `EnvironmentFile` with mode 0600) and restart the service.
+   The token is read from the environment on every sync and on every config
+   change, so rotating it is just an environment change + service restart —
+   no config edit, and it never lands in `config.json` (which is commonly
+   backed up) nor in any API response.
+3. Enable the feature from the admin settings, or:
+
+   ```sh
+   curl -X PUT http://localhost:2121/api/config/bug-reports \
+     -H "Authorization: Bearer <admin-token>" -H "Content-Type: application/json" \
+     -d '{"enabled":true,"owner":"Riloox","repo":"fleetdeck-open","labels":["bug"]}'
+   ```
+
+   Only `enabled`, `owner`, `repo`, and `labels` are accepted; a `token` field
+   in the request is ignored. The response config never contains a token.
+
+### Operational notes
+
+- **One-way sync.** Issue creation only — comments/status are not mirrored
+  back. Retries are idempotent via a stored marker (searched before
+  re-creating), so ambiguous network failures cannot duplicate issues.
+- **Auth failures are budget-exhausting.** A 401/403 (bad or expired token,
+  wrong repo) marks the report failed and stops retrying it, so a broken
+  credential is not hammered. Transient failures (429/5xx/network) retry with
+  exponential backoff up to 5 attempts over 30 days.
+- **Privacy.** Issue bodies are public content: reporter username, panel
+  version, user agent, screen (`game`/`view`/`route`), and timestamp are
+  included by design; passwords, tokens, server paths, logs, and email are
+  not. Audit events record report id + outcome + issue number/url only.
+- **Per-user throttling.** Each user may submit up to 5 reports per minute
+  (`429 rate_limited` beyond that); the throttle is in-memory and resets on
+  panel restart.
+- **Diagnostics.** `bug_report.created` and `bug_report.sync` audit events
+  carry the report id, sync state, and GitHub issue number/url. Pending/failed
+  rows live in `data/fleetdeck.db` (`bug_reports` table) with the last
+  redacted error.
