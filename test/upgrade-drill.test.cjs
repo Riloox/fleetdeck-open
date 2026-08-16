@@ -182,7 +182,7 @@ tests.push(() => {
   // (Find the split by name: newer migrations sit after it in the array.)
   const idx = migrations.MIGRATIONS.findIndex((m) => m.name === 'api-keys');
   assert.ok(idx > 0, 'api-keys migration should exist');
-  const tail = migrations.MIGRATIONS.splice(idx);   // api-keys + drop-backup-drills
+  const tail = migrations.MIGRATIONS.splice(idx);   // api-keys and everything after it
   const r1 = migrations.runMigrations();            // applies 1–11
   migrations.MIGRATIONS.push(...tail);              // restore immediately
   assert.strictEqual(r1.applied.length, 11, 'should apply 11 migrations');
@@ -192,11 +192,14 @@ tests.push(() => {
   const beforeOps = dumpTable(db, 'operations');
   close();
 
-  // Run the runner — it should pick up both pending migrations.
+  // Run the runner — it should pick up every migration in the tail. The
+  // expectation is derived from `tail` rather than hardcoded so adding a new
+  // migration does not fail this test; what is under test is the snapshot and
+  // data-survival behaviour, not how many migrations happen to exist.
   const r2 = migrations.runMigrations();
-  assert.strictEqual(r2.applied.length, 2, 'should apply the pending migrations');
-  assert.strictEqual(r2.applied[0].name, 'api-keys');
-  assert.strictEqual(r2.applied[1].name, 'drop-backup-drills');
+  const expectedNames = [...tail].sort((a, b) => a.version - b.version).map((m) => m.name);
+  assert.strictEqual(r2.applied.length, expectedNames.length, 'should apply the pending migrations');
+  assert.deepStrictEqual(r2.applied.map((a) => a.name), expectedNames);
 
   // A snapshot was created before the upgrade ran.
   assert.ok(r2.snapshot, 'upgrade should produce a pre-migration snapshot');
