@@ -7792,10 +7792,15 @@ registerGlobalErrorHandler();
 const server = http.createServer(app);
 const wss = new WebSocketServer({ noServer: true });
 
+const CRLF = String.fromCharCode(13, 10);
+
 server.on('upgrade', (req, socket, head) => {
   const url = new URL(req.url, 'http://localhost');
+  // Reject with a proper HTTP response + FIN (socket.end) instead of a raw
+  // destroy: a bare RST here aborts the client side mid-flight, which the Vite
+  // dev proxy surfaces as "ws proxy socket error: ECONNABORTED" noise.
   if (url.pathname !== '/ws') {
-    socket.destroy();
+    socket.end(['HTTP/1.1 404 Not Found', 'Connection: close', '', ''].join(CRLF));
     return;
   }
   // Cross-site WebSocket hijack defense: browsers send an Origin header on
@@ -7803,8 +7808,7 @@ server.on('upgrade', (req, socket, head) => {
   // state-changing HTTP middleware above). Non-browser clients without an
   // Origin header still need a valid token below.
   if (req.headers.origin && !originAllowed(req.headers.origin)) {
-    socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
-    socket.destroy();
+    socket.end(['HTTP/1.1 403 Forbidden', 'Connection: close', '', ''].join(CRLF));
     return;
   }
   const token = url.searchParams.get('token') || '';
@@ -7813,8 +7817,7 @@ server.on('upgrade', (req, socket, head) => {
   // disagree about who the caller is.
   const user = (apiKeys.looksLikeApiKey(token) ? apiKeys.verify(token) : userFromToken(token)) || guestUser();
   if (!user) {
-    socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
-    socket.destroy();
+    socket.end(['HTTP/1.1 401 Unauthorized', 'Connection: close', '', ''].join(CRLF));
     return;
   }
   req.fleetdeckUser = user;
