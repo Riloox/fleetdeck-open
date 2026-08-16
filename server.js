@@ -3123,7 +3123,14 @@ function loadBugReportCore() {
 function bugReportConfigBlock() {
   if (!loadBugReportCore()) return { enabled: false, owner: 'Riloox', repo: 'fleetdeck-open', labels: ['bug'], mode: 'github', relayUrl: null, token: null, errors: [] };
   try { return _bugReportConfig.normalizeConfig(config.bugReports || {}, process.env); }
-  catch {
+  catch (err) {
+    // normalizeConfig is written not to throw (it reports problems in its
+    // `errors` array), so a throw here means the block is unusable. Degrade to
+    // the disabled shape: sync reports 'not_configured' and the retry worker
+    // stays off, instead of taking the panel down over a bad config block.
+    log('bug-report config unusable:', (err && err.message) || err);
+    return { enabled: false, owner: 'Riloox', repo: 'fleetdeck-open', labels: ['bug'], mode: 'github', relayUrl: null, token: null, errors: ['invalid_config'] };
+  }
 }
 
 // One-shot sync for the POST route: create the GitHub issue (github mode) or
