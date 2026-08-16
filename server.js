@@ -3275,6 +3275,8 @@ function bugReportConfigBlock() {
   if (!loadBugReportCore()) return { enabled: false, owner: 'Riloox', repo: 'fleetdeck-open', labels: ['bug'], mode: 'github', relayUrl: null, token: null, errors: [] };
   try { return _bugReportConfig.normalizeConfig(config.bugReports || {}, process.env); }
   catch {
+    return { enabled: false, owner: 'Riloox', repo: 'fleetdeck-open', labels: ['bug'], mode: 'github', relayUrl: null, token: null, errors: ['invalid_config'] };
+  }
 }
 
 // One-shot sync for the POST route: create the GitHub issue (github mode) or
